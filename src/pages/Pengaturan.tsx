@@ -927,10 +927,39 @@ const Pengaturan = () => {
               <input type="file" accept="image/*" ref={akunLogoRef} className="hidden" onChange={(e) => handleAkunLogoUpload(e, 'customLogo')} />
               <input type="file" accept="image/*" ref={akunKemenagLogoRef} className="hidden" onChange={(e) => handleAkunLogoUpload(e, 'customKemenagLogo')} />
 
+              {/* Username & Password Section */}
+              <Expandable title="Akun Login">
+              <div className="border border-border rounded-lg p-4 space-y-3">
+                
+                <h3 className="font-medium text-sm"></h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <Label>Username</Label>
+                    <Input
+                      value={data.settings.username || ''}
+                      onChange={e => updateData(d => ({ ...d, settings: { ...d.settings, username: e.target.value } }))}
+                      placeholder="Username"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label>Password</Label>
+                    <Input
+                      type="password"
+                      value={data.settings.password ? atob(data.settings.password) : ''}
+                      onChange={e => updateData(d => ({ ...d, settings: { ...d.settings, password: btoa(e.target.value) } }))}
+                      placeholder="Password"
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">Perubahan username dan password dapat dilakukan di sini.</p>
+              </div>
+              </Expandable>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Expandable title="Logo Sidebar">
                 <div className="border border-border rounded-lg p-4 space-y-3">
-                  <Label className="font-medium">Logo Sidebar</Label>
                   <div className="flex items-center gap-3">
                     {data.settings.customLogo ? (
                       <img src={data.settings.customLogo} alt="Logo" className="w-14 h-14 object-contain border rounded" />
@@ -951,9 +980,10 @@ const Pengaturan = () => {
                     </div>
                   </div>
                 </div>
+                </Expandable>
 
+                <Expandable title="Logo Kementerian Agama">
                 <div className="border border-border rounded-lg p-4 space-y-3">
-                  <Label className="font-medium">Logo Kementerian Agama</Label>
                   <div className="flex items-center gap-3">
                     {data.settings.customKemenagLogo ? (
                       <img src={data.settings.customKemenagLogo} alt="Kemenag" className="w-14 h-14 object-contain border rounded" />
@@ -974,8 +1004,9 @@ const Pengaturan = () => {
                     </div>
                   </div>
                 </div>
+                </Expandable>
               </div>
-
+              
               <div className="border-t border-border pt-4">
                 <h3 className="font-medium text-sm mb-3">Identitas Sekolah</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

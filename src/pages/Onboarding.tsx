@@ -1,8 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '@/contexts/AppContext';
-import { expandSchoolName, buildLine2, buildSchoolSub, parseMadrasahName } from '@/lib/store';
-import { KABUPATEN_LIST } from '@/lib/kabupaten';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,66 +10,44 @@ import { toast } from 'sonner';
 const Onboarding = () => {
   const { updateData } = useApp();
   const navigate = useNavigate();
-  const [appName, setAppName] = useState('MANAJEMEN SURAT');
-  const [schoolName, setSchoolName] = useState('');
-  const [kabupatenInput, setKabupatenInput] = useState('');
-  const [kabupatenSearch, setKabupatenSearch] = useState('');
-  const [showKabupatenList, setShowKabupatenList] = useState(false);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [passwordConfirm, setPasswordConfirm] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [nsm, setNsm] = useState('');
   const [npsn, setNpsn] = useState('');
 
-  const madrasahInfo = parseMadrasahName(schoolName);
-
-  const filteredKabupaten = useMemo(() => {
-    const q = kabupatenSearch.toLowerCase();
-    if (!q) return KABUPATEN_LIST.slice(0, 20);
-    return KABUPATEN_LIST.filter(k => k.toLowerCase().includes(q)).slice(0, 30);
-  }, [kabupatenSearch]);
-
-  const handleSelectKabupaten = (k: string) => {
-    setKabupatenInput(k);
-    setKabupatenSearch(k);
-    setShowKabupatenList(false);
-  };
-
   const handleSubmit = () => {
-    if (!appName.trim()) { toast.error('Nama aplikasi wajib diisi'); return; }
-    if (!schoolName.trim()) { toast.error('Nama sekolah wajib diisi'); return; }
+    if (!username.trim()) { toast.error('Username wajib diisi'); return; }
+    if (!password.trim()) { toast.error('Password wajib diisi'); return; }
+    if (password !== passwordConfirm) { toast.error('Password tidak cocok'); return; }
+    if (password.length < 6) { toast.error('Password minimal 6 karakter'); return; }
 
-    const kabupaten = kabupatenInput.trim();
-    const expandedSchool = expandSchoolName(schoolName.trim());
-    const line2 = kabupaten ? buildLine2(kabupaten) : '';
-    const schoolSub = kabupaten ? buildSchoolSub(kabupaten) : '';
-
-    const headerDefaults = madrasahInfo.isMadrasah ? {
-      line1: 'KEMENTERIAN AGAMA REPUBLIK INDONESIA',
-      line2,
-      school: expandedSchool,
-      schoolSub,
-    } : {
-      line1: '',
-      line2,
-      school: schoolName.trim().toUpperCase(),
-      schoolSub,
-    };
+    const appName = 'MANAJEMEN SURAT';
+    const schoolName = username.trim();
 
     updateData(d => ({
       ...d,
       settings: {
         ...d.settings,
-        appName: appName.trim(),
-        schoolName: schoolName.trim(),
-        kabupaten,
+        appName,
+        schoolName,
+        username: username.trim(),
+        password: btoa(password.trim()), // Simple base64 encoding for storage
+        kabupaten: '',
         nsm: nsm.trim(),
         npsn: npsn.trim(),
         onboarded: true,
         suratHeader: {
           ...d.settings.suratHeader,
-          ...headerDefaults,
+          line1: '',
+          line2: '',
+          school: schoolName.toUpperCase(),
+          schoolSub: '',
         },
       },
     }));
-    toast.success('Selamat datang!');
+    toast.success('Akun berhasil dibuat! Selamat datang.');
     navigate('/');
   };
 
@@ -80,69 +56,52 @@ const Onboarding = () => {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Selamat Datang 👋</CardTitle>
-          <p className="text-sm text-muted-foreground mt-1">Atur identitas aplikasi Anda untuk memulai.</p>
+          <p className="text-sm text-muted-foreground mt-1">Buat akun untuk memulai menggunakan aplikasi.</p>
         </CardHeader>
         <CardContent className="space-y-5">
           <div>
-            <Label>Nama Aplikasi (Sidebar)</Label>
+            <Label>Username</Label>
             <Input
-              value={appName}
-              onChange={e => setAppName(e.target.value)}
-              placeholder="cth: MANAJEMEN SURAT"
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              placeholder="cth: admin"
               className="mt-1"
+              type="text"
             />
-            <p className="text-xs text-muted-foreground mt-1">Akan ditampilkan di sidebar sebagai judul aplikasi.</p>
+            <p className="text-xs text-muted-foreground mt-1">Username untuk login ke aplikasi. Juga digunakan sebagai nama sekolah.</p>
           </div>
 
           <div>
-            <Label>Nama Sekolah</Label>
-            <Input
-              value={schoolName}
-              onChange={e => setSchoolName(e.target.value)}
-              placeholder="cth: MIN 1 Langsa"
-              className="mt-1"
-            />
-            <p className="text-xs text-muted-foreground mt-1">Akan ditampilkan di header dan dashboard.</p>
-            {madrasahInfo.isMadrasah && schoolName.trim() && (
-              <div className="mt-2 p-2 rounded-md bg-primary/10 border border-primary/20">
-                <p className="text-xs font-mono text-primary">{expandSchoolName(schoolName)}</p>
-                <p className="text-xs text-muted-foreground">Nama lengkap otomatis</p>
-              </div>
-            )}
+            <Label>Password</Label>
+            <div className="relative mt-1">
+              <Input
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="Minimal 6 karakter"
+                type={showPassword ? "text" : "password"}
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                {showPassword ? '🙈' : '👁️'}
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Pastikan password kuat dan aman.</p>
           </div>
 
-          {/* Kabupaten picker */}
-          <div className="relative">
-            <Label>Kabupaten / Kota</Label>
+          <div>
+            <Label>Konfirmasi Password</Label>
             <Input
-              value={kabupatenSearch}
-              onChange={e => { setKabupatenSearch(e.target.value); setKabupatenInput(e.target.value); setShowKabupatenList(true); }}
-              onFocus={() => setShowKabupatenList(true)}
-              placeholder="cth: Kota Langsa"
+              value={passwordConfirm}
+              onChange={e => setPasswordConfirm(e.target.value)}
+              placeholder="Masukkan ulang password"
+              type={showPassword ? "text" : "password"}
               className="mt-1"
-              autoComplete="off"
             />
-            <p className="text-xs text-muted-foreground mt-1">Digunakan sebagai placeholder {'{kabupaten}'} di template.</p>
-            {showKabupatenList && filteredKabupaten.length > 0 && (
-              <div className="absolute z-50 left-0 right-0 mt-1 bg-background border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
-                {filteredKabupaten.map(k => (
-                  <button
-                    key={k}
-                    type="button"
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors"
-                    onMouseDown={() => handleSelectKabupaten(k)}
-                  >
-                    {k}
-                  </button>
-                ))}
-              </div>
-            )}
-            {kabupatenInput && (
-              <div className="mt-1 p-2 rounded-md bg-muted/50 text-xs space-y-0.5">
-                <div><span className="text-muted-foreground">Header baris 2:</span> <span className="font-medium">{buildLine2(kabupatenInput)}</span></div>
-                <div><span className="text-muted-foreground">Sub header:</span> <span className="font-medium">{buildSchoolSub(kabupatenInput)}</span></div>
-              </div>
-            )}
+            <p className="text-xs text-muted-foreground mt-1">Pastikan kedua password sama.</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -169,7 +128,7 @@ const Onboarding = () => {
           </div>
 
           <Button onClick={handleSubmit} className="w-full" size="lg">
-            Mulai Menggunakan
+            Buat Akun & Mulai
           </Button>
         </CardContent>
       </Card>
