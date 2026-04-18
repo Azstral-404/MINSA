@@ -61,6 +61,9 @@ export interface JenisSurat {
   createdAt: string;
   selectedBiodata?: string[];
   jenisSuratHeader?: JenisSuratHeader; // Per-jenis-surat header settings (optional)
+  // Signature: uses Kepala Madrasah data (id references kepalaMadrasahId)
+  signatureKepalaMadrasahId?: string;  // Reference to KepalaMadrasah
+  signatureImageUrl?: string;          // Signature image (Base64)
 }
 
 export interface Surat {
