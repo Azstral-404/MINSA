@@ -1,0 +1,580 @@
+// MINSA - Store & Types
+
+export interface BiodataField {
+  key: string;
+  label: string;
+  placeholder: string;
+  inputType: 'text' | 'date' | 'select';
+  isCustom?: boolean;
+}
+
+export const DEFAULT_BIODATA: BiodataField[] = [
+  { key: 'nama', label: 'Nama', placeholder: '{nama}', inputType: 'text' },
+  { key: 'tempatLahir', label: 'Tempat/Tanggal Lahir', placeholder: '{tempat_lahir}, {tanggal_lahir}', inputType: 'text' },
+  { key: 'jenisKelamin', label: 'Jenis Kelamin', placeholder: '{jenis_kelamin}', inputType: 'select' },
+  { key: 'kelas', label: 'Kelas', placeholder: '{kelas}', inputType: 'select' },
+  { key: 'noInduk', label: 'No. Induk', placeholder: '{no_induk}', inputType: 'text' },
+  { key: 'nisn', label: 'NISN', placeholder: '{nisn}', inputType: 'text' },
+  { key: 'namaOrangTua', label: 'Nama Orang Tua/Wali', placeholder: '{nama_orang_tua}', inputType: 'text' },
+  { key: 'alamat', label: 'Alamat', placeholder: '{alamat}', inputType: 'text' },
+  { key: 'tahunAjaran', label: 'Tahun Ajaran', placeholder: '{tahun_ajaran}', inputType: 'text' },
+];
+
+export interface KepalaMadrasah {
+  id: string;
+  nip: string;
+  nama: string;
+}
+
+export interface TahunAjaran {
+  id: string;
+  label: string;
+}
+
+export interface JenisSuratHeader {
+  useGlobalHeader: boolean;
+  // Per-jenis-surat custom header (optional, replaces global if provided)
+  customHeaderMode?: 'text' | 'image'; // text or image mode
+  customLine1?: string;
+  customLine2?: string;
+  customSchool?: string;
+  customAddress?: string;
+  customContact?: string;
+  customLogoUrl?: string;
+  customLogoSize?: number;
+  customLine1Size?: number;
+  customLine2Size?: number;
+  customSchoolSize?: number;
+  customAddressSize?: number;
+  customContactSize?: number;
+  customHeaderImageUrl?: string; // For image mode
+}
+
+export interface JenisSurat {
+  id: string;
+  slug: string;
+  label: string;
+  templateJudul: string;
+  templateIsi: string;       // HTML fallback (from mammoth conversion, kept for non-Electron / web)
+  templateDocxBase64?: string; // base64-encoded .docx — source of truth when present
+  nomorSuratFormat: string;   // Custom nomor surat format for this jenis surat
+  createdAt: string;
+  selectedBiodata?: string[];
+  jenisSuratHeader?: JenisSuratHeader; // Per-jenis-surat header settings (optional)
+}
+
+export interface Surat {
+  id: string;
+  jenisSuratId: string;
+  nomorSurat: string;
+  nama: string;
+  tempatLahir: string;
+  tanggalLahir: string;
+  jenisKelamin: string;
+  kelas: string;
+  noInduk: string;
+  nisn: string;
+  namaOrangTua: string;
+  alamat: string;
+  tahunAjaran: string;
+  bulan: number;
+  tahun: number;
+  kepalaMadrasahId: string;
+  arah: 'masuk' | 'keluar';
+  createdAt: string;
+  updatedAt?: string;
+  extraFields?: Record<string, string>;
+}
+
+export type ThemeName = 'light' | 'dark';
+export type ColorTheme = 'default' | 'emerald' | 'ocean' | 'sunset' | 'royal' | 'rose' | 'teal' | 'amber' | 'slate' | 'indigo' | 'cyan' | 'fuchsia' | 'lime' | 'zinc' | 'gold' | 'silver' | 'bronze' | 'magenta' | 'peach' | 'mint' | 'lavender' | 'charcoal' | 'coral' | 'olive' | 'custom';
+
+export interface SuratHeader {
+  line1: string;
+  line2: string;
+  school: string;
+  schoolSub: string;
+  address: string;
+  contact: string;
+  logoUrl: string;
+  logoSize: number;
+  line1Size?: number;
+  line2Size?: number;
+  schoolSize?: number;
+  schoolSubSize?: number;
+  addressSize?: number;
+  contactSize?: number;
+  headerMode?: 'text' | 'image';
+  headerImageUrl?: string;
+}
+
+export interface Repository {
+  id: string;
+  name: string;
+  description?: string;
+  url?: string;
+  installed: boolean;
+}
+
+export interface AppSettings {
+  kepalaMadrasah: KepalaMadrasah[];
+  tahunAjaran: TahunAjaran[];
+  jenisSurat: JenisSurat[];
+  repositories?: Repository[];
+  theme: ThemeName;
+  colorTheme: ColorTheme;
+  activeTahunAjaran: string;
+  dashboardTitle: string;
+  suratHeader: SuratHeader;
+  nsm: string;
+  npsn: string;
+  nomorSuratFormat: string;
+  customBiodata?: BiodataField[];
+  appName: string;
+  schoolName: string;
+  kabupaten: string;
+  customLogo: string;
+  customKemenagLogo: string;
+  onboarded: boolean;
+  customThemeColor?: string;
+}
+
+export interface AppData {
+  settings: AppSettings;
+  surat: Surat[];
+}
+
+const DEFAULT_HEADER: SuratHeader = {
+  line1: '',
+  line2: '',
+  school: '',
+  schoolSub: '',
+  address: '',
+  contact: '',
+  logoUrl: '',
+  logoSize: 22,
+  line1Size: 16,
+  line2Size: 14,
+  schoolSize: 12,
+  schoolSubSize: 10,
+  addressSize: 11,
+  contactSize: 11,
+};
+
+function detectSystemTheme(): ThemeName {
+  if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches) {
+    return 'dark';
+  }
+  return 'light';
+}
+
+const DEFAULT_DATA: AppData = {
+  settings: {
+    kepalaMadrasah: [],
+    tahunAjaran: [],
+    jenisSurat: [],
+    repositories: [],
+    theme: 'light',
+    colorTheme: 'default',
+    activeTahunAjaran: '',
+    dashboardTitle: 'Sistem Surat',
+    suratHeader: DEFAULT_HEADER,
+    nsm: '',
+    npsn: '',
+    nomorSuratFormat: 'B. {nomor} /Mi.01.21/1/PP.01.1/{bulan}/{tahun}',
+    customBiodata: [],
+    appName: 'MINSA (Manajemen Surat & Informasi Nasional)',
+    schoolName: 'NAMA SEKOLAH',
+    kabupaten: '',
+    customLogo: '',
+    customKemenagLogo: '',
+    onboarded: false,
+  },
+  surat: [],
+};
+
+const STORAGE_KEY = 'minsa-data';
+
+// ── Electron API detection ────────────────────────────────────────────────────
+declare global {
+  interface Window {
+    electronAPI?: {
+      getPrinters(): unknown;
+      printDocument(arg0: { printerName: string; copies: number; duplex: boolean; }): unknown;
+      printToPDF(arg0: { pageSize: string; landscape: boolean; }): unknown;
+      isElectron: boolean;
+      getDataPath: () => Promise<string>;
+      chooseDataPath: () => Promise<string | null>;
+      openDataFolder: () => Promise<void>;
+      storageRead: () => Promise<string | null>;
+      storageWrite: (json: string) => Promise<boolean>;
+      exportData: (json: string) => Promise<string | false>;
+      importData: () => Promise<string | null>;
+      getAppInfo: () => Promise<{ version: string; dataPath: string; platform: string; arch: string; osVersion: string }>;
+      setNativeTheme: (theme: 'light' | 'dark' | 'system') => Promise<void>;
+      // DOCX template management
+      saveTemplateDocx: (slug: string, base64: string) => Promise<string | false>; // returns saved path or false
+      openTemplateDocx: (slug: string) => Promise<boolean>;                         // opens in default app
+      readTemplateDocx: (slug: string) => Promise<string | null>;                   // reads back as base64 after editing
+      deleteTemplateDocx: (slug: string) => Promise<boolean>;
+    };
+  }
+}
+
+export const isElectron = typeof window !== 'undefined' && !!window.electronAPI?.isElectron;
+
+// ── Parse raw JSON into typed AppData ─────────────────────────────────────────
+function parseRawData(raw: string): AppData | null {
+  try {
+    const parsed = JSON.parse(raw);
+    return {
+      ...DEFAULT_DATA,
+      ...parsed,
+      settings: {
+        ...DEFAULT_DATA.settings,
+        ...parsed.settings,
+        customBiodata: parsed.settings?.customBiodata || [],
+        appName: parsed.settings?.appName || 'MANAJEMEN SURAT',
+        schoolName: parsed.settings?.schoolName || 'NAMA SEKOLAH',
+        kabupaten: parsed.settings?.kabupaten || '',
+        customLogo: parsed.settings?.customLogo || '',
+        customKemenagLogo: parsed.settings?.customKemenagLogo || '',
+        onboarded: parsed.settings?.onboarded ?? false,
+        customThemeColor: parsed.settings?.customThemeColor || '',
+        suratHeader: {
+          ...DEFAULT_HEADER,
+          ...(parsed.settings?.suratHeader || {}),
+          schoolSub: parsed.settings?.suratHeader?.schoolSub || '',
+          schoolSubSize: parsed.settings?.suratHeader?.schoolSubSize || 10,
+        },
+      },
+      surat: (parsed.surat || []).map((s: any) => ({
+        ...s,
+        arah: s.arah || 'keluar',
+        extraFields: s.extraFields || {},
+      })),
+    };
+  } catch {
+    return null;
+  }
+}
+
+// ── Sync load (used on startup from localStorage fallback or cached value) ────
+export function loadData(): AppData {
+  // In Electron, we prime from localStorage cache; async refresh happens in useAppData
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = parseRawData(raw);
+      if (parsed) return parsed;
+    }
+  } catch { /* ignore */ }
+  return structuredClone({ ...DEFAULT_DATA, settings: { ...DEFAULT_DATA.settings, theme: detectSystemTheme() } });
+}
+
+// ── Async load — reads from Electron file storage when available ───────────────
+export async function loadDataAsync(): Promise<AppData> {
+  if (isElectron && window.electronAPI) {
+    try {
+      const raw = await window.electronAPI.storageRead();
+      if (raw) {
+        const parsed = parseRawData(raw);
+        if (parsed) {
+          // Keep localStorage in sync for sync reads
+          localStorage.setItem(STORAGE_KEY, raw);
+          return parsed;
+        }
+      }
+    } catch { /* fallback below */ }
+  }
+  return loadData();
+}
+
+// ── Save — writes to Electron file AND localStorage ───────────────────────────
+export function saveData(data: AppData): void {
+  const json = JSON.stringify(data);
+  // Always keep localStorage updated (fast sync read)
+  try { localStorage.setItem(STORAGE_KEY, json); } catch { /* ignore */ }
+  // Also write to file in Electron (reliable, survives cache clears)
+  if (isElectron && window.electronAPI) {
+    window.electronAPI.storageWrite(json).catch(() => { /* silent */ });
+  }
+}
+
+// ── Backup & restore helpers ──────────────────────────────────────────────────
+export async function exportDataToFile(data: AppData): Promise<string | false> {
+  if (!isElectron || !window.electronAPI) return false;
+  return window.electronAPI.exportData(JSON.stringify(data, null, 2));
+}
+
+export async function importDataFromFile(): Promise<AppData | null> {
+  if (!isElectron || !window.electronAPI) return null;
+  const raw = await window.electronAPI.importData();
+  if (!raw) return null;
+  return parseRawData(raw);
+}
+
+export function generateId(): string {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+export function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+}
+
+export const BULAN_NAMES = [
+  '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+];
+
+export const KELAS_OPTIONS = [
+  { value: 'I', label: 'I (Satu)' },
+  { value: 'II', label: 'II (Dua)' },
+  { value: 'III', label: 'III (Tiga)' },
+  { value: 'IV', label: 'IV (Empat)' },
+  { value: 'V', label: 'V (Lima)' },
+  { value: 'VI', label: 'VI (Enam)' },
+];
+
+export const COLOR_THEMES: { value: ColorTheme; label: string; color: string }[] = [
+  { value: 'default',  label: 'Default',  color: '#1e293b' },
+  { value: 'emerald',  label: 'Emerald',  color: '#059669' },
+  { value: 'ocean',    label: 'Ocean',    color: '#0284c7' },
+  { value: 'sunset',   label: 'Sunset',   color: '#ea580c' },
+  { value: 'royal',    label: 'Royal',    color: '#7c3aed' },
+  { value: 'rose',     label: 'Rose',     color: '#e11d48' },
+  { value: 'teal',     label: 'Teal',     color: '#0d9488' },
+  { value: 'amber',    label: 'Amber',    color: '#d97706' },
+  { value: 'slate',    label: 'Slate',    color: '#475569' },
+  { value: 'indigo',   label: 'Indigo',   color: '#4f46e5' },
+  { value: 'cyan',     label: 'Cyan',     color: '#06b6d4' },
+  { value: 'fuchsia',  label: 'Fuchsia',  color: '#d946ef' },
+  { value: 'lime',     label: 'Lime',     color: '#84cc16' },
+  { value: 'zinc',     label: 'Zinc',     color: '#71717a' },
+  { value: 'gold',     label: 'Gold',     color: '#d4af37' },
+  { value: 'silver',   label: 'Silver',   color: '#c0c0c0' },
+  { value: 'bronze',   label: 'Bronze',   color: '#cd7f32' },
+  { value: 'magenta',  label: 'Magenta',  color: '#ff00ff' },
+  { value: 'peach',    label: 'Peach',    color: '#ffb07c' },
+  { value: 'mint',     label: 'Mint',     color: '#98ff98' },
+  { value: 'lavender', label: 'Lavender', color: '#b57edc' },
+  { value: 'charcoal', label: 'Charcoal', color: '#333333' },
+  { value: 'coral',    label: 'Coral',    color: '#ff7f50' },
+  { value: 'olive',    label: 'Olive',    color: '#708238' },
+  { value: 'custom',   label: 'Custom',   color: '#000000' },
+];
+
+/** Validate tahun ajaran format: must be YYYY/YYYY+1, e.g. 2025/2026 */
+export function isValidTahunAjaran(label: string): boolean {
+  const m = label.trim().match(/^(\d{4})\/(\d{4})$/);
+  if (!m) return false;
+  const y1 = parseInt(m[1], 10);
+  const y2 = parseInt(m[2], 10);
+  return y2 === y1 + 1;
+}
+
+export function isInTahunAjaran(surat: Pick<Surat, 'bulan' | 'tahun'>, taLabel: string): boolean {
+  const parts = taLabel.split('/');
+  if (parts.length !== 2) return false;
+  const startYear = parseInt(parts[0], 10);
+  const endYear = parseInt(parts[1], 10);
+  if (isNaN(startYear) || isNaN(endYear)) return false;
+  return (surat.tahun === startYear && surat.bulan >= 7) || (surat.tahun === endYear && surat.bulan <= 6);
+}
+
+export function formatNomorSurat(nomorSurat: string, bulan: number, tahun: number, format?: string): string {
+  const bulanStr = String(bulan).padStart(2, '0');
+  const template = format || 'B. {nomor} /Mi.01.21/1/PP.01.1/{bulan}/{tahun}';
+  // When nomor is empty, replace with 7 non-breaking spaces to keep the slot visible
+  const nomorValue = nomorSurat && nomorSurat.trim() ? nomorSurat.trim() : '\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0';
+  const result = template
+    .replace(/\{nomor\}/gi, nomorValue)
+    .replace(/\{bulan\}/gi, bulanStr)
+    .replace(/\{tahun\}/gi, String(tahun));
+  return result;
+}
+
+export function getAllBiodataFields(settings: AppSettings): BiodataField[] {
+  return [...DEFAULT_BIODATA, ...(settings.customBiodata || []).map(f => ({ ...f, isCustom: true }))];
+}
+
+export function extractBiodataKeysFromTemplate(settings: AppSettings, template: string): string[] {
+  if (!template) return [];
+
+  // Extract tokens like {nama} or {no_induk} from template HTML/text
+  const tokens = new Set<string>();
+  const re = /\{([a-zA-Z0-9_]+)\}/g;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(template)) !== null) {
+    tokens.add(match[1].trim().toLowerCase());
+  }
+
+  // Map template tokens → form keys
+  const tokenToKey: Record<string, string> = {
+    // default biodata tokens
+    nama: 'nama',
+    tempat_lahir: 'tempatLahir',
+    tanggal_lahir: 'tempatLahir',
+    jenis_kelamin: 'jenisKelamin',
+    kelas: 'kelas',
+    no_induk: 'noInduk',
+    nisn: 'nisn',
+    nama_orang_tua: 'namaOrangTua',
+    alamat: 'alamat',
+    tahun_ajaran: 'tahunAjaran',
+
+    // nomor surat formatting tokens (not biodata)
+    nomor: '',
+    bulan: '',
+    tahun: '',
+  };
+
+  const customKeys = new Set((settings.customBiodata || []).map(f => f.key.toLowerCase()));
+
+  const keys: string[] = [];
+  for (const token of tokens) {
+    const mapped = tokenToKey[token];
+    if (mapped === '') continue; // explicitly ignored tokens
+    if (mapped) {
+      keys.push(mapped);
+      continue;
+    }
+    // custom biodata uses {key}
+    if (customKeys.has(token)) keys.push(token);
+  }
+
+  // De-duplicate, preserve insertion order
+  const unique = [...new Set(keys)];
+  return unique.filter(k => k !== 'tahunAjaran'); // tahun ajaran is auto-filled, no input needed
+}
+
+export function generateBiodataTableHtml(selectedKeys: string[], allFields: BiodataField[]): string {
+  const selected = selectedKeys.map(key => allFields.find(f => f.key === key)).filter(Boolean) as BiodataField[];
+  if (selected.length === 0) return '';
+
+  // Use fixed pixel width for label column — consistent ruler regardless of font size
+  // 40% of A4 text width ≈ label column; colon separator; right side = placeholder
+  // Wrapped in <p> to match the editor's paragraph model (insertParagraph creates <p>)
+  let html = '';
+  for (const field of selected) {
+    // Label in a fixed-width inline-block, colon, then placeholder
+    // style matches .template-editor p exactly
+    html += `<p style="margin:0;line-height:1.5;font-family:'Times New Roman',Times,serif;font-size:12pt;text-align:justify;">` +
+      `<span style="display:inline-block;min-width:10cm;font-family:'Times New Roman',Times,serif;font-size:12pt;">${field.label}</span>` +
+      `<span style="font-family:'Times New Roman',Times,serif;font-size:12pt;">: ${field.placeholder}</span>` +
+      `</p>`;
+  }
+  return html;
+}
+
+export const MADRASAH_TYPES = ['RA', 'MI', 'MIN', 'MIS', 'MTS', 'MTs', 'MTsN', 'MTSN', 'MTSS', 'MTsS', 'MA', 'MAN', 'MAS'];
+
+export interface MadrasahInfo {
+  type: string;
+  city: string;
+  isMadrasah: boolean;
+  baseType: 'RA' | 'MI' | 'MTS' | 'MA' | '';
+  status: 'NEGERI' | 'SWASTA' | '';
+}
+
+export interface MadrasahParsed extends MadrasahInfo {
+  nomor: string;   // e.g. "1" from "MIN 1 Langsa"
+  cityRaw: string; // city as typed (e.g. "Langsa")
+}
+
+export function detectMadrasahInfo(schoolName: string): MadrasahInfo | null {
+  return parseMadrasahName(schoolName);
+}
+
+/**
+ * Parse madrasah name like "MIN 1 Langsa" into components.
+ * Handles: MI, MIN, MIS, MTs, MTsN, MTsS, MAN, MAS, MA, RA
+ * Pattern: {TYPE} [{number}] {city}
+ */
+export function parseMadrasahName(schoolName: string): MadrasahParsed {
+  const empty: MadrasahParsed = { type: '', city: '', cityRaw: '', nomor: '', isMadrasah: false, baseType: '', status: '' };
+  if (!schoolName.trim()) return empty;
+
+  const sorted = [...MADRASAH_TYPES].sort((a, b) => b.length - a.length);
+  for (const type of sorted) {
+    const regex = new RegExp(`^${type}\\s+`, 'i');
+    if (regex.test(schoolName.trim())) {
+      const rest = schoolName.trim().replace(regex, '').trim();
+
+      // Extract optional leading number
+      const nomorMatch = rest.match(/^(\d+)\s*(.*)$/);
+      const nomor = nomorMatch ? nomorMatch[1] : '';
+      const cityRaw = nomorMatch ? nomorMatch[2].trim() : rest;
+      const city = cityRaw.toUpperCase();
+
+      if (cityRaw) {
+        const upper = type.toUpperCase();
+        let baseType: MadrasahInfo['baseType'] = '';
+        if (upper === 'RA') baseType = 'RA';
+        else if (upper === 'MI' || upper === 'MIN' || upper === 'MIS') baseType = 'MI';
+        else if (['MTS', 'MTSN', 'MTSS', 'MTS', 'MTSN'].includes(upper) ||
+                 type.toUpperCase() === 'MTS' || type.toUpperCase() === 'MTSN' ||
+                 type.toUpperCase() === 'MTSS' || type.toUpperCase() === 'MTS') baseType = 'MTS';
+        else if (upper === 'MA' || upper === 'MAN' || upper === 'MAS') baseType = 'MA';
+
+        // MTs variants
+        if (type === 'MTs' || type === 'MTsN' || type === 'MTsS') baseType = 'MTS';
+
+        // Determine status (N=NEGERI, S=SWASTA)
+        let status: MadrasahInfo['status'] = '';
+        const lastChar = type.slice(-1).toUpperCase();
+        if (lastChar === 'N' && type.length > 2) status = 'NEGERI';
+        else if (lastChar === 'S' && type.length > 2) status = 'SWASTA';
+
+        return { type, city, cityRaw, nomor, isMadrasah: true, baseType, status };
+      }
+    }
+  }
+  return empty;
+}
+
+/**
+ * Build the full expanded school name for the header.
+ * "MIN 1 Langsa" → "MADRASAH IBTIDAIYAH NEGERI 1 LANGSA"
+ */
+export function expandSchoolName(schoolName: string): string {
+  const info = parseMadrasahName(schoolName);
+  if (!info.isMadrasah || !info.cityRaw) return schoolName.toUpperCase();
+
+  let base = '';
+  switch (info.baseType) {
+    case 'RA': base = 'RAUDHATHUL ATHFAL'; break;
+    case 'MI': base = 'MADRASAH IBTIDAIYAH'; break;
+    case 'MTS': base = 'MADRASAH TSANAWIYAH'; break;
+    case 'MA': base = 'MADRASAH ALIYAH'; break;
+    default: base = info.type.toUpperCase();
+  }
+
+  const statusStr = info.status ? ` ${info.status}` : '';
+  const nomorStr = info.nomor ? ` ${info.nomor}` : '';
+  return `${base}${statusStr}${nomorStr} ${info.city}`;
+}
+
+/**
+ * Build line2 for header: "KANTOR KEMENTERIAN AGAMA {KABUPATEN UPPERCASE}"
+ */
+export function buildLine2(kabupaten: string): string {
+  if (!kabupaten.trim()) return '';
+  return `KANTOR KEMENTERIAN AGAMA ${kabupaten.toUpperCase()}`;
+}
+
+/**
+ * Build schoolSub text: "Kementerian Agama {Kabupaten Title Case}"
+ */
+export function buildSchoolSub(kabupaten: string): string {
+  if (!kabupaten.trim()) return '';
+  const titleCase = kabupaten
+    .toLowerCase()
+    .split(' ')
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+  return `Kementerian Agama ${titleCase}`;
+}
