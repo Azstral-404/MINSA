@@ -121,6 +121,8 @@ export interface Repository {
 }
 
 export interface AppSettings {
+  username?: string;
+  password?: string;
   kepalaMadrasah: KepalaMadrasah[];
   tahunAjaran: TahunAjaran[];
   jenisSurat: JenisSurat[];

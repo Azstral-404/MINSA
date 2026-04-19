@@ -80,92 +80,128 @@ export function JenisSuratWizard({
   allJenisSurat = [],
   customBiodata = [],
 }: JenisSuratWizardProps) {
-  const [step, setStep] = useState(initialStep);
+  const isEditing = !!initialData;
+  const [step, setStep] = useState(initialStep || 0);
   const [labelError, setLabelError] = useState('');
 
   // ── Form state ────────────────────────────────────────────────────────────
-  const [label, setLabel] = useState(initialData?.label || '');
-  const [templateJudul, setTemplateJudul] = useState(initialData?.templateJudul || '');
-  const [templateIsi, setTemplateIsi] = useState(initialData?.templateIsi || '');
-  const [nomorSuratFormat, setNomorSuratFormat] = useState(
-    initialData?.nomorSuratFormat || defaultNomorSuratFormat
-  );
-const [selectedKepalaMadrasahNama, setSelectedKepalaMadrasahNama] = useState<boolean>(
-    initialData?.extraFields?.showKepalaNama === 'true'
-  );
-  const [selectedKepalaMadrasahNip, setSelectedKepalaMadrasahNip] = useState<boolean>(
-    initialData?.extraFields?.showKepalaNip === 'true'
-  );
+  const [label, setLabel] = useState('');
+  const [templateJudul, setTemplateJudul] = useState('');
+  const [templateIsi, setTemplateIsi] = useState('');
+  const [nomorSuratFormat, setNomorSuratFormat] = useState(defaultNomorSuratFormat);
+  const [selectedKepalaMadrasahNama, setSelectedKepalaMadrasahNama] = useState(false);
+  const [selectedKepalaMadrasahNip, setSelectedKepalaMadrasahNip] = useState(false);
+  const [headerMode, setHeaderMode] = useState<'text' | 'image'>('text');
+  const [customLine1, setCustomLine1] = useState('');
+  const [customLine2, setCustomLine2] = useState('');
+  const [customSchool, setCustomSchool] = useState('');
+  const [customAddress, setCustomAddress] = useState('');
+  const [customContact, setCustomContact] = useState('');
+  const [customLogoUrl, setCustomLogoUrl] = useState('');
+  const [customLogoSize, setCustomLogoSize] = useState(22);
+  const [customLine1Size, setCustomLine1Size] = useState(16);
+  const [customLine2Size, setCustomLine2Size] = useState(14);
+  const [customSchoolSize, setCustomSchoolSize] = useState(12);
+  const [customAddressSize, setCustomAddressSize] = useState(11);
+  const [customContactSize, setCustomContactSize] = useState(11);
+  const [customHeaderImageUrl, setCustomHeaderImageUrl] = useState('');
+  const [signatureKepalaMadrasahId, setSignatureKepalaMadrasahId] = useState('');
+  const [signatureImageUrl, setSignatureImageUrl] = useState('');
 
+  // ── Load initialData when modal opens or data changes ──────────────────────
+  useEffect(() => {
+    if (!open) {
+      // Reset on close
+      setLabel('');
+      setTemplateJudul('');
+      setTemplateIsi('');
+      setNomorSuratFormat(defaultNomorSuratFormat);
+      setSelectedKepalaMadrasahNama(false);
+      setSelectedKepalaMadrasahNip(false);
+      setHeaderMode('text');
+      setCustomLine1('');
+      setCustomLine2('');
+      setCustomSchool('');
+      setCustomAddress('');
+      setCustomContact('');
+      setCustomLogoUrl('');
+      setCustomLogoSize(22);
+      setCustomLine1Size(16);
+      setCustomLine2Size(14);
+      setCustomSchoolSize(12);
+      setCustomAddressSize(11);
+      setCustomContactSize(11);
+      setCustomHeaderImageUrl('');
+      setSignatureKepalaMadrasahId('');
+      setSignatureImageUrl('');
+      setStep(initialStep || 0);
+      return;
+    }
 
-  // ── Header helpers ────────────────────────────────────────────────────────
+    if (initialData) {
+      // Edit mode: load all data
+      setLabel(initialData.label || '');
+      setTemplateJudul(initialData.templateJudul || '');
+      setTemplateIsi(initialData.templateIsi || '');
+      setNomorSuratFormat(initialData.nomorSuratFormat || defaultNomorSuratFormat);
+      
+      // Extra fields
+      setSelectedKepalaMadrasahNama(initialData.extraFields?.showKepalaNama === 'true');
+      setSelectedKepalaMadrasahNip(initialData.extraFields?.showKepalaNip === 'true');
+      
+      // Signature
+      setSignatureKepalaMadrasahId(initialData.signatureKepalaMadrasahId || '');
+      setSignatureImageUrl(initialData.signatureImageUrl || '');
+      
+      // Header
+      const header = initialData.jenisSuratHeader as JenisSuratHeader || {} as JenisSuratHeader;
+      const mode = (header.customHeaderMode || 'text') === 'image' ? 'image' : 'text';
+      setHeaderMode(mode);
+      
+      if (mode === 'text') {
+        setCustomLine1(header.customLine1 || '');
+        setCustomLine2(header.customLine2 || '');
+        setCustomSchool(header.customSchool || '');
+        setCustomAddress(header.customAddress || '');
+        setCustomContact(header.customContact || '');
+        setCustomLogoUrl(header.customLogoUrl || '');
+        setCustomLogoSize(header.customLogoSize || 22);
+        setCustomLine1Size(header.customLine1Size || 16);
+        setCustomLine2Size(header.customLine2Size || 14);
+        setCustomSchoolSize(header.customSchoolSize || 12);
+        setCustomAddressSize(header.customAddressSize || 11);
+        setCustomContactSize(header.customContactSize || 11);
+      } else {
+        setCustomHeaderImageUrl(header.customHeaderImageUrl || '');
+      }
+      
+      setStep(initialStep || 3);
+    } else {
+      // Add mode: fresh defaults
+      setLabel('');
+      setTemplateJudul('');
+      setTemplateIsi('');
+      setNomorSuratFormat(defaultNomorSuratFormat);
+      setSelectedKepalaMadrasahNama(false);
+      setSelectedKepalaMadrasahNip(false);
+      setHeaderMode('text');
+      // ... other defaults already set
+      setStep(initialStep || 0);
+    }
+  }, [open, initialData, initialStep, defaultNomorSuratFormat]);
+
+// ── Header helpers (after useEffect load) ──────────────────────────────────
   const getLastHeaderSettings = useCallback(() => {
-    if (initialData?.jenisSuratHeader) return initialData.jenisSuratHeader;
+    // Only for NEW (no localStorage when editing - useEffect handles it)
+    if (initialData) return null;
     try {
       const saved = localStorage.getItem('lastJenisSuratHeader');
       if (saved) return JSON.parse(saved);
     } catch (_) {}
     return null;
-  }, [initialData]);
+  }, []);
 
   const lastHeaderSettings = useMemo(() => getLastHeaderSettings(), [getLastHeaderSettings]);
-
-  const [headerMode, setHeaderMode] = useState<'text' | 'image'>(
-    (lastHeaderSettings?.customHeaderMode ?? initialData?.jenisSuratHeader?.customHeaderMode) ===
-      'image'
-      ? 'image'
-      : 'text'
-  );
-  const [customLine1, setCustomLine1] = useState(
-    lastHeaderSettings?.customLine1 ?? initialData?.jenisSuratHeader?.customLine1 ?? ''
-  );
-  const [customLine2, setCustomLine2] = useState(
-    lastHeaderSettings?.customLine2 ?? initialData?.jenisSuratHeader?.customLine2 ?? ''
-  );
-  const [customSchool, setCustomSchool] = useState(
-    lastHeaderSettings?.customSchool ?? initialData?.jenisSuratHeader?.customSchool ?? ''
-  );
-  const [customAddress, setCustomAddress] = useState(
-    lastHeaderSettings?.customAddress ?? initialData?.jenisSuratHeader?.customAddress ?? ''
-  );
-  const [customContact, setCustomContact] = useState(
-    lastHeaderSettings?.customContact ?? initialData?.jenisSuratHeader?.customContact ?? ''
-  );
-  const [customLogoUrl, setCustomLogoUrl] = useState(
-    lastHeaderSettings?.customLogoUrl ?? initialData?.jenisSuratHeader?.customLogoUrl ?? ''
-  );
-  const [customLogoSize, setCustomLogoSize] = useState(
-    lastHeaderSettings?.customLogoSize ?? initialData?.jenisSuratHeader?.customLogoSize ?? 22
-  );
-  const [customLine1Size, setCustomLine1Size] = useState(
-    lastHeaderSettings?.customLine1Size ?? initialData?.jenisSuratHeader?.customLine1Size ?? 16
-  );
-  const [customLine2Size, setCustomLine2Size] = useState(
-    lastHeaderSettings?.customLine2Size ?? initialData?.jenisSuratHeader?.customLine2Size ?? 14
-  );
-  const [customSchoolSize, setCustomSchoolSize] = useState(
-    lastHeaderSettings?.customSchoolSize ?? initialData?.jenisSuratHeader?.customSchoolSize ?? 12
-  );
-  const [customAddressSize, setCustomAddressSize] = useState(
-    lastHeaderSettings?.customAddressSize ?? initialData?.jenisSuratHeader?.customAddressSize ?? 11
-  );
-  const [customContactSize, setCustomContactSize] = useState(
-    lastHeaderSettings?.customContactSize ?? initialData?.jenisSuratHeader?.customContactSize ?? 11
-  );
-  const [customHeaderImageUrl, setCustomHeaderImageUrl] = useState(
-    lastHeaderSettings?.customHeaderImageUrl ??
-      initialData?.jenisSuratHeader?.customHeaderImageUrl ??
-      ''
-  );
-
-  // ── Signature fields (for Step 5) ──────────────────────────────────────────
-  // Signature now uses Kepala Madrasah data (nama + nip)
-  const [signatureKepalaMadrasahId, setSignatureKepalaMadrasahId] = useState(
-    initialData?.signatureKepalaMadrasahId ?? ''
-  );
-  const [signatureImageUrl, setSignatureImageUrl] = useState(
-    initialData?.signatureImageUrl ?? ''
-  );
 
   const signatureInputRef = useRef<HTMLInputElement>(null);
 
@@ -553,7 +589,12 @@ handleClose();
   };
 
   // ── Close / reset ─────────────────────────────────────────────────────────
-  const handleClose = () => {
+const handleClose = () => {
+    // Clear localStorage to prevent persistence
+    try {
+      localStorage.removeItem('lastJenisSuratHeader');
+    } catch (_) {}
+    
     setStep(0);
     setLabel('');
     setLabelError('');
@@ -576,6 +617,8 @@ handleClose();
     setCustomSchoolSize(12);
     setCustomAddressSize(11);
     setCustomContactSize(11);
+    setSignatureKepalaMadrasahId('');
+    setSignatureImageUrl('');
     onOpenChange(false);
   };
 
@@ -727,7 +770,7 @@ handleClose();
 
         {/* Step indicator */}
         <div className="flex gap-1 mb-6">
-          {STEPS.map((s, i) => (
+        {STEPS.map((s, i) => (
             <div
               key={i}
               title={s}
@@ -735,6 +778,8 @@ handleClose();
                 i === step ? 'bg-primary' : i < step ? 'bg-primary/50' : 'bg-muted'
               }`}
               onClick={() => {
+                // Editing: cannot go back to step 0 to preserve data
+                if (isEditing && i === 0) return;
                 // Only allow going back to already-completed steps
                 if (i < step) setStep(i);
               }}

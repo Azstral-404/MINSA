@@ -530,8 +530,9 @@ const Pengaturan = () => {
   const [editLabel, setEditLabel] = useState('');
   const [editJudul, setEditJudul] = useState('');
   const [reloadingSlug, setReloadingSlug] = useState<string | null>(null);
-  const [wizardOpen, setWizardOpen] = useState(false);
-  const [wizardEditingJenis, setWizardEditingJenis] = useState<JenisSurat | undefined>(undefined);
+  const [addWizardOpen, setAddWizardOpen] = useState(false);
+  const [editWizardOpen, setEditWizardOpen] = useState(false);
+  const [editingJenisSurat, setEditingJenisSurat] = useState<JenisSurat | null>(null);
 
   const [newCustomLabel, setNewCustomLabel] = useState('');
   const [newCustomKey, setNewCustomKey] = useState('');
@@ -722,38 +723,45 @@ const Pengaturan = () => {
     setEditConfirm({ type: 'Jenis Surat', action: doSaveEditJenis });
   };
 
-  // Handle wizard save for new or edited jenis surat
-  const handleWizardSaveJenisSurat = async (jenisSurat: JenisSurat) => {
+  // Handle add wizard save (new jenis surat)
+  const handleAddWizardSave = async (jenisSurat: JenisSurat) => {
     try {
-      // Save DOCX to disk if present (Electron only)
       if (jenisSurat.templateDocxBase64 && isElectron && window.electronAPI?.saveTemplateDocx) {
         await window.electronAPI.saveTemplateDocx(jenisSurat.slug, jenisSurat.templateDocxBase64);
       }
 
-      if (wizardEditingJenis) {
-        // Update existing
-        updateData(d => ({
-          ...d,
-          settings: {
-            ...d.settings,
-            jenisSurat: d.settings.jenisSurat.map(j => (j.id === jenisSurat.id ? jenisSurat : j)),
-          },
-        }));
-        toast.success('Jenis surat diperbarui');
-      } else {
-        // Add new
-        updateData(d => ({
-          ...d,
-          settings: {
-            ...d.settings,
-            jenisSurat: [...d.settings.jenisSurat, jenisSurat],
-          },
-        }));
-        toast.success('Jenis surat ditambahkan');
+      updateData(d => ({
+        ...d,
+        settings: {
+          ...d.settings,
+          jenisSurat: [...d.settings.jenisSurat, jenisSurat],
+        },
+      }));
+      toast.success('Jenis surat ditambahkan');
+      setAddWizardOpen(false);
+    } catch (err) {
+      toast.error('Gagal menyimpan jenis surat');
+      console.error(err);
+    }
+  };
+
+  // Handle edit wizard save (update existing)
+  const handleEditWizardSave = async (jenisSurat: JenisSurat) => {
+    try {
+      if (jenisSurat.templateDocxBase64 && isElectron && window.electronAPI?.saveTemplateDocx) {
+        await window.electronAPI.saveTemplateDocx(jenisSurat.slug, jenisSurat.templateDocxBase64);
       }
 
-      setWizardOpen(false);
-      setWizardEditingJenis(undefined);
+      updateData(d => ({
+        ...d,
+        settings: {
+          ...d.settings,
+          jenisSurat: d.settings.jenisSurat.map(j => (j.id === jenisSurat.id ? jenisSurat : j)),
+        },
+      }));
+      toast.success('Jenis surat diperbarui');
+      setEditWizardOpen(false);
+      setEditingJenisSurat(null);
     } catch (err) {
       toast.error('Gagal menyimpan jenis surat');
       console.error(err);
@@ -1335,8 +1343,8 @@ const Pengaturan = () => {
           {/* Jenis Surat Table */}
           <Expandable title="Jenis Surat">
             <div className="expandable-content p-6 pt-6">
-              <div className="flex justify-end mb-4">
-                <Button onClick={() => { setWizardEditingJenis(undefined); setWizardOpen(true); }}>
+              <div className="flex justify-end mb-4 gap-2">
+                <Button onClick={() => setAddWizardOpen(true)}>
                   <Plus className="mr-2 h-4 w-4" />
                   Tambah Jenis Surat
                 </Button>
@@ -1370,10 +1378,9 @@ const Pengaturan = () => {
                               variant="outline"
                               size="sm"
                               onClick={() => {
-                                setWizardEditingJenis(js);
-                                setWizardOpen(true);
+                                setEditingJenisSurat(js);
+                                setEditWizardOpen(true);
                               }}
-                              initialStep={3}
                             >
                               <Pencil className="h-3 w-3 mr-1" />
                               Edit
@@ -1482,12 +1489,25 @@ const Pengaturan = () => {
             </div>
           </Expandable>
 
-          {/* Jenis Surat Wizard */}
+          {/* Jenis Surat Add Wizard */}
           <JenisSuratWizard
-            open={wizardOpen}
-            onOpenChange={setWizardOpen}
-            initialData={wizardEditingJenis}
-            onSave={handleWizardSaveJenisSurat}
+            open={addWizardOpen}
+            onOpenChange={setAddWizardOpen}
+            initialData={undefined}
+            initialStep={0}
+            onSave={handleAddWizardSave}
+            existingKepalaMadrasah={data.settings.kepalaMadrasah}
+            defaultNomorSuratFormat={data.settings.nomorSuratFormat}
+            allJenisSurat={data.settings.jenisSurat}
+            customBiodata={data.settings.customBiodata}
+          />
+          {/* Jenis Surat Edit Wizard */}
+          <JenisSuratWizard
+            open={editWizardOpen}
+            onOpenChange={setEditWizardOpen}
+            initialData={editingJenisSurat || undefined}
+            initialStep={3}
+            onSave={handleEditWizardSave}
             existingKepalaMadrasah={data.settings.kepalaMadrasah}
             defaultNomorSuratFormat={data.settings.nomorSuratFormat}
             allJenisSurat={data.settings.jenisSurat}
