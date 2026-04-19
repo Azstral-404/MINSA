@@ -22,10 +22,50 @@ function formatIndonesianDate(dateStr: string): string {
   return `${String(parseInt(parts[2])).padStart(2,'0')} ${months[parseInt(parts[1])-1] || ''} ${parts[0]}`;
 }
 
+import type { JenisSuratHeader } from '@/lib/store';
+
 interface A4PreviewProps {
   surat: Surat;
   jenisSurat: JenisSurat;
 }
+
+function getEffectiveHeader(
+  jenisSuratHeader: JenisSuratHeader | undefined,
+  globalHeader: any,
+  globalSettings: any
+): any {
+  if (jenisSuratHeader && !jenisSuratHeader.useGlobalHeader) {
+    // Per-surat custom header takes priority
+    const customMode = jenisSuratHeader.customHeaderMode || 'text';
+    if (customMode === 'image' && jenisSuratHeader.customHeaderImageUrl) {
+      return {
+        ...globalHeader,
+        headerMode: 'image' as const,
+        headerImageUrl: jenisSuratHeader.customHeaderImageUrl,
+      };
+    } else {
+      // Text mode with custom fields
+      return {
+        headerMode: 'text' as const,
+        line1: jenisSuratHeader.customLine1 || '',
+        line2: jenisSuratHeader.customLine2 || '',
+        school: jenisSuratHeader.customSchool || '',
+        address: jenisSuratHeader.customAddress || '',
+        contact: jenisSuratHeader.customContact || '',
+        logoUrl: jenisSuratHeader.customLogoUrl || globalSettings.customKemenagLogo || '',
+        logoSize: (jenisSuratHeader.customLogoSize || 22),
+        line1Size: jenisSuratHeader.customLine1Size || 16,
+        line2Size: jenisSuratHeader.customLine2Size || 14,
+        schoolSize: jenisSuratHeader.customSchoolSize || 12,
+        addressSize: jenisSuratHeader.customAddressSize || 11,
+        contactSize: jenisSuratHeader.customContactSize || 11,
+      };
+    }
+  }
+  // Fallback to global
+  return globalHeader;
+}
+
 
 // ── DOCX renderer — converts base64 docx → HTML via mammoth, then injects biodata ──
 function useDocxHtml(jenisSurat: JenisSurat, surat: Surat, kabupaten: string, customBiodata: any[]) {
@@ -88,8 +128,16 @@ function useDocxHtml(jenisSurat: JenisSurat, surat: Surat, kabupaten: string, cu
 
 export function A4Preview({ surat, jenisSurat }: A4PreviewProps) {
   const { data } = useApp();
-  const kepala = data.settings.kepalaMadrasah.find(k => k.id === surat.kepalaMadrasahId);
-  const h = data.settings.suratHeader;
+  
+  // Use per-surat signature override if available
+  const effectiveKepalaId = jenisSurat.signatureKepalaMadrasahId || surat.kepalaMadrasahId;
+  const kepala = data.settings.kepalaMadrasah.find(k => k.id === effectiveKepalaId);
+  
+  // Determine effective header: per-surat custom > global
+  const globalHeader = data.settings.suratHeader;
+  const jenisHeader = jenisSurat.jenisSuratHeader;
+  const h = getEffectiveHeader(jenisHeader, globalHeader, data.settings);
+
   const kabupaten = data.settings.kabupaten || '';
   const customBiodata = data.settings.customBiodata || [];
 
@@ -147,6 +195,7 @@ export function A4Preview({ surat, jenisSurat }: A4PreviewProps) {
 
   const parsedIsi = hasDocx ? (docxHtml || '') : parseTemplate(jenisSurat.templateIsi);
   const logoSrc = h.logoUrl || (data.settings.customKemenagLogo || kemnogLogo);
+  const hasSignatureImage = !!jenisSurat.signatureImageUrl;
   const cityForTtd = kabupaten ? kabupaten.replace(/^(Kota|Kabupaten)\s+/i, '').trim() : 'Langsa';
   const suratDate = surat.createdAt ? new Date(surat.createdAt) : new Date();
   const formattedDate = `${String(suratDate.getDate()).padStart(2,'0')} ${['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'][suratDate.getMonth()]} ${suratDate.getFullYear()}`;
@@ -181,8 +230,18 @@ export function A4Preview({ surat, jenisSurat }: A4PreviewProps) {
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '10px' }}>
                   {logoSrc && (
-                    <img src={logoSrc} alt="Logo" className="logo"
-                      style={{ width: '83px', height: '83px', minWidth: '83px', maxWidth: '83px', objectFit: 'contain', flexShrink: 0 }}
+                    <img 
+                      src={logoSrc} 
+                      alt="Logo" 
+                      className="logo"
+                      style={{ 
+                        width: `${h.logoSize || 22}mm`, 
+                        height: `${h.logoSize || 22}mm`, 
+                        minWidth: `${h.logoSize || 22}mm`, 
+                        maxWidth: `${h.logoSize || 22}mm`, 
+                        objectFit: 'contain', 
+                        flexShrink: 0 
+                      }}
                     />
                   )}
                   <div style={{ flex: 1, textAlign: 'center' }}>
@@ -256,17 +315,33 @@ export function A4Preview({ surat, jenisSurat }: A4PreviewProps) {
                   #a4-isi-content u { text-decoration:underline !important; }
                 `}</style>
                 <div id="a4-isi-content" style={{ textAlign: 'justify' }} dangerouslySetInnerHTML={{ __html: parsedIsi }} />
-                {/* TTD */}
+                {/* TTD - with signature image support */}
                 {kepala && (
                   <div style={{ marginTop: '40px', paddingLeft: '100mm' }}>
                     <div>{cityForTtd}, {formattedDate}</div>
                     <div>Kepala Madrasah,</div>
-                    <div style={{ marginTop: '60px', fontWeight: 'bold', display: 'inline-block', position: 'relative', marginBottom: kepala.nip ? '4px' : '3px', minWidth: '120px' }}>
-                      {kepala.nip ? (
-                        <span style={{ display: 'inline-block', borderBottom: '1px solid black', paddingBottom: '2px' }}>{kepala.nama}</span>
-                      ) : kepala.nama}
-                    </div>
-                    {kepala.nip && <div>NIP. {kepala.nip}</div>}
+                    {hasSignatureImage ? (
+                      <div style={{ marginTop: '60px' }}>
+                        <img 
+                          src={jenisSurat.signatureImageUrl!} 
+                          alt="Tanda Tangan" 
+                          style={{ 
+                            height: '60px', 
+                            width: 'auto', 
+                            maxWidth: '120px',
+                            verticalAlign: 'bottom'
+                          }} 
+                        />
+                        <div style={{ fontWeight: 'bold', marginTop: '8px' }}>{kepala.nama}</div>
+                      </div>
+                    ) : (
+                      <div style={{ marginTop: '60px', fontWeight: 'bold', display: 'inline-block', position: 'relative', marginBottom: kepala.nip ? '4px' : '3px', minWidth: '120px' }}>
+                        {kepala.nip ? (
+                          <span style={{ display: 'inline-block', borderBottom: '1px solid black', paddingBottom: '2px' }}>{kepala.nama}</span>
+                        ) : kepala.nama}
+                      </div>
+                    )}
+                    {kepala.nip && !hasSignatureImage && <div>NIP. {kepala.nip}</div>}
                   </div>
                 )}
               </>
