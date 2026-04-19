@@ -12,6 +12,8 @@ dist-electron
 dist
 dist-ssr
 *.local
+TODO.md
+
 
 # Editor directories and files
 .vscode/*

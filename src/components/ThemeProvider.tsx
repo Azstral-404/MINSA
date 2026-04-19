@@ -65,39 +65,154 @@ function hexToHsl(hex: string): string | null {
   return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
 }
 
+function generateFullPalette(h: number, s: number, l: number, isDark: boolean) {
+  const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+  
+  // Primary variants
+  const primaryL = isDark ? clamp(l + 25, 40, 70) : clamp(l, 40, 60);
+  const primary = `${Math.round(h)} ${Math.round(s)}% ${Math.round(primaryL)}%`;
+  
+  // Primary foreground (contrast)
+  const primaryFgL = isDark ? 98 : 10;
+  const primaryFg = `${Math.round(h)} ${Math.round(s * 0.2)}% ${primaryFgL}%`;
+  
+  // Secondary (adjacent hue)
+  const secH = (h + (isDark ? 20 : -20) + 360) % 360;
+  const secL = isDark ? clamp(l - 20, 15, 25) : clamp(l + 30, 90, 98);
+  const secondary = `${Math.round(secH)} ${Math.round(s * 0.6)}% ${Math.round(secL)}%`;
+  const secondaryFg = isDark ? '210 40% 98%' : primary;
+  
+  // Muted/Accent (grayish)
+  const mutedL = isDark ? clamp(l - 25, 15, 20) : clamp(l + 35, 92, 98);
+  const muted = `210 40% ${Math.round(mutedL)}%`;
+  const mutedFg = isDark ? '215 20% 65%' : `215 16% 47%`;
+  
+  // Backgrounds
+  const bgL = isDark ? clamp(l - 30, 4, 8) : '100%';
+  const background = `${Math.round(h * 0.1)} 10% ${bgL}`;
+  const foreground = isDark ? '210 40% 98%' : `222 84% 5%`;
+  
+  // Card/Popover
+  const cardL = isDark ? bgL : '100%';
+  const card = background;
+  const cardFg = foreground;
+  
+  // Destructive (red)
+  const destructive = isDark ? '0 62.8% 30.6%' : '0 84.2% 60.2%';
+  const destructiveFg = isDark ? '210 40% 98%' : '210 40% 98%';
+  
+  // Border/Input (subtle)
+  const borderL = isDark ? clamp(l - 20, 15, 20) : clamp(l + 20, 85, 95);
+  const border = `${Math.round(h * 0.2)} 32% ${Math.round(borderL)}%`;
+  const input = border;
+  
+  // Ring (primary glow)
+  const ring = primary;
+  
+  // Radius (fixed)
+  const radius = '0.5rem';
+  
+  // Sidebar variants
+  const sidebarBgL = isDark ? clamp(l - 10, 8, 12) : clamp(l + 20, 95, 98);
+  const sidebarBg = `${Math.round(h * 0.05)} 5% ${Math.round(sidebarBgL)}%`;
+  const sidebarFg = foreground;
+  const sidebarPrimary = primary;
+  const sidebarPrimaryFg = primaryFg;
+  const sidebarAccentL = isDark ? clamp(l - 15, 12, 18) : clamp(l + 15, 90, 96);
+  const sidebarAccent = `${Math.round(h * 0.1)} 4% ${Math.round(sidebarAccentL)}%`;
+  const sidebarAccentFg = sidebarFg;
+  const sidebarBorder = border;
+  const sidebarRing = ring;
+  
+  return {
+    '--background': background,
+    '--foreground': foreground,
+    '--card': card,
+    '--card-foreground': cardFg,
+    '--popover': card,
+    '--popover-foreground': cardFg,
+    '--primary': primary,
+    '--primary-foreground': primaryFg,
+    '--secondary': secondary,
+    '--secondary-foreground': secondaryFg,
+    '--muted': muted,
+    '--muted-foreground': mutedFg,
+    '--accent': muted,
+    '--accent-foreground': mutedFg,
+    '--destructive': destructive,
+    '--destructive-foreground': destructiveFg,
+    '--border': border,
+    '--input': input,
+    '--ring': ring,
+    '--radius': radius,
+    '--sidebar-background': sidebarBg,
+    '--sidebar-foreground': sidebarFg,
+    '--sidebar-primary': sidebarPrimary,
+    '--sidebar-primary-foreground': sidebarPrimaryFg,
+    '--sidebar-accent': sidebarAccent,
+    '--sidebar-accent-foreground': sidebarAccentFg,
+    '--sidebar-border': sidebarBorder,
+    '--sidebar-ring': sidebarRing,
+  };
+}
+
 function applyTheme(isDark: boolean, colorTheme: string, customColor?: string) {
   const root = document.documentElement;
 
   // 1. dark / light class on <html>
   root.classList.toggle('dark',  isDark);
   root.classList.toggle('light', !isDark);
-  root.dataset.theme = colorTheme || 'default';
+  root.dataset.theme = colorTheme === 'custom' ? 'custom' : (colorTheme || 'default');
 
   // 2. color-scheme so native browser UI (scrollbars, inputs) follows
   root.style.colorScheme = isDark ? 'dark' : 'light';
 
   // 3. Electron native title bar
-  window.electronAPI?.setNativeTheme?.(isDark ? 'dark' : 'light');
+  if (window.electronAPI?.setNativeTheme) {
+    window.electronAPI.setNativeTheme(isDark ? 'dark' : 'light');
+  }
 
-  // 4. Apply color theme CSS variables
-  let vars = COLOR_VARS[colorTheme] ?? COLOR_VARS['default'];
-  
+  // 4. Apply CSS variables
   if (colorTheme === 'custom' && customColor) {
     const hsl = hexToHsl(customColor);
     if (hsl) {
-      // Darken slightly for sidebar
-      const parts = hsl.split(' ');
-      const l = parseFloat(parts[2]);
-      const darkerL = Math.max(l - 8, 5);
-      const sidebarHsl = `${parts[0]} ${parts[1]} ${darkerL}%`;
-      vars = { primary: hsl, ring: hsl, sidebarPrimary: sidebarHsl };
+      const [hStr, sStr, lStr] = hsl.split(' ');
+      const h = parseFloat(hStr);
+      const s = parseFloat(sStr.replace('%', ''));
+      const l = parseFloat(lStr.replace('%', ''));
+      
+      // Generate full palette
+      const palette = generateFullPalette(h, s, l, isDark);
+      
+      // Apply all vars
+      Object.entries(palette).forEach(([key, value]) => {
+        root.style.setProperty(key, value);
+      });
+      
+      return; // Skip preset vars
     }
   }
-  root.style.setProperty('--primary',         vars.primary);
-  root.style.setProperty('--ring',            vars.ring);
+  
+  // Preset themes (partial - but CSS index.css provides full)
+  const vars = COLOR_VARS[colorTheme] ?? COLOR_VARS['default'];
+  root.style.setProperty('--primary', vars.primary);
+  root.style.setProperty('--ring', vars.ring);
   root.style.setProperty('--sidebar-primary', vars.sidebarPrimary);
-  // sidebar-ring matches ring
-  root.style.setProperty('--sidebar-ring',    vars.ring);
+  root.style.setProperty('--sidebar-ring', vars.ring);
+  
+// For preset themes, reset all custom vars so CSS [data-theme=xxx] takes over
+  ['--background', '--foreground', '--card', '--card-foreground', '--popover', '--popover-foreground', 
+   '--primary', '--primary-foreground', '--secondary', '--secondary-foreground', '--muted', '--muted-foreground',
+   '--accent', '--accent-foreground', '--destructive', '--destructive-foreground', '--border', '--input',
+   '--ring', '--sidebar-background', '--sidebar-foreground', '--sidebar-primary', '--sidebar-primary-foreground',
+   '--sidebar-accent', '--sidebar-accent-foreground', '--sidebar-border', '--sidebar-ring'].forEach(prop => {
+    root.style.removeProperty(prop);
+  });
+  
+  root.style.setProperty('--primary', vars.primary);
+  root.style.setProperty('--ring', vars.ring);
+  root.style.setProperty('--sidebar-primary', vars.sidebarPrimary);
+  root.style.setProperty('--sidebar-ring', vars.ring);
 }
 
 // ── Scrollbar fade-on-scroll ──────────────────────────────────────────────────

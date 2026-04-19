@@ -4,7 +4,7 @@
 
 @layer base {
   /* Default theme - light */
-  :root, [data-theme="default"] {
+  :root, [data-theme="default"], [data-theme="custom"] {
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
@@ -1444,15 +1444,16 @@
     --sidebar-border: 78 20% 18%;
     --sidebar-ring: 78.2 26.5% 55%;
   }
-
---foreground: 45 72% 20%;
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
 }
+
+  @layer base {
+    * {
+      @apply border-border;
+    }
+    body {
+      @apply bg-background text-foreground;
+    }
+  }
 
 /* Hide scrollbar utility */
 .scrollbar-none {
