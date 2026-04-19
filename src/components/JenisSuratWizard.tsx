@@ -56,6 +56,7 @@ export interface JenisSuratWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialData?: JenisSurat;
+  initialStep?: number;
   onSave: (data: JenisSurat) => void;
   existingKepalaMadrasah: Array<{ id: string; nama: string; nip: string }>;
   defaultNomorSuratFormat: string;
@@ -72,13 +73,14 @@ export function JenisSuratWizard({
   open,
   onOpenChange,
   initialData,
+  initialStep = 0,
   onSave,
   existingKepalaMadrasah,
   defaultNomorSuratFormat,
   allJenisSurat = [],
   customBiodata = [],
 }: JenisSuratWizardProps) {
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(initialStep);
   const [labelError, setLabelError] = useState('');
 
   // ── Form state ────────────────────────────────────────────────────────────

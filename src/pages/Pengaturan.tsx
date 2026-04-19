@@ -1373,6 +1373,7 @@ const Pengaturan = () => {
                                 setWizardEditingJenis(js);
                                 setWizardOpen(true);
                               }}
+                              initialStep={3}
                             >
                               <Pencil className="h-3 w-3 mr-1" />
                               Edit
