@@ -129,9 +129,18 @@ function useDocxHtml(jenisSurat: JenisSurat, surat: Surat, kabupaten: string, cu
 export function A4Preview({ surat, jenisSurat }: A4PreviewProps) {
   const { data } = useApp();
   
+
   // Use per-surat signature override if available
   const effectiveKepalaId = jenisSurat.signatureKepalaMadrasahId || surat.kepalaMadrasahId;
   const kepala = data.settings.kepalaMadrasah.find(k => k.id === effectiveKepalaId);
+  
+  // Kepala madrasah visibility from wizard checkboxes
+  const showKepalaNama = jenisSurat.extraFields?.showKepalaNama === 'true';
+  const showKepalaNip = jenisSurat.extraFields?.showKepalaNip === 'true';
+  const showTtd = showKepalaNama || showKepalaNip;
+  
+  const hasSignatureImage = !!jenisSurat.signatureImageUrl;
+
   
   // Determine effective header: per-surat custom > global
   const globalHeader = data.settings.suratHeader;
@@ -195,7 +204,6 @@ export function A4Preview({ surat, jenisSurat }: A4PreviewProps) {
 
   const parsedIsi = hasDocx ? (docxHtml || '') : parseTemplate(jenisSurat.templateIsi);
   const logoSrc = h.logoUrl || (data.settings.customKemenagLogo || kemnogLogo);
-  const hasSignatureImage = !!jenisSurat.signatureImageUrl;
   const cityForTtd = kabupaten ? kabupaten.replace(/^(Kota|Kabupaten)\s+/i, '').trim() : 'Langsa';
   const suratDate = surat.createdAt ? new Date(surat.createdAt) : new Date();
   const formattedDate = `${String(suratDate.getDate()).padStart(2,'0')} ${['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'][suratDate.getMonth()]} ${suratDate.getFullYear()}`;
@@ -315,8 +323,8 @@ export function A4Preview({ surat, jenisSurat }: A4PreviewProps) {
                   #a4-isi-content u { text-decoration:underline !important; }
                 `}</style>
                 <div id="a4-isi-content" style={{ textAlign: 'justify' }} dangerouslySetInnerHTML={{ __html: parsedIsi }} />
-                {/* TTD - with signature image support */}
-                {kepala && (
+                {/* TTD - conditional based on wizard checkboxes */}
+                {kepala && showTtd && (
                   <div style={{ marginTop: '40px', paddingLeft: '100mm' }}>
                     <div>{cityForTtd}, {formattedDate}</div>
                     <div>Kepala Madrasah,</div>
@@ -332,16 +340,16 @@ export function A4Preview({ surat, jenisSurat }: A4PreviewProps) {
                             verticalAlign: 'bottom'
                           }} 
                         />
-                        <div style={{ fontWeight: 'bold', marginTop: '8px' }}>{kepala.nama}</div>
+                        {showKepalaNama && <div style={{ fontWeight: 'bold', marginTop: '8px' }}>{kepala.nama}</div>}
                       </div>
                     ) : (
-                      <div style={{ marginTop: '60px', fontWeight: 'bold', display: 'inline-block', position: 'relative', marginBottom: kepala.nip ? '4px' : '3px', minWidth: '120px' }}>
-                        {kepala.nip ? (
+                      <div style={{ marginTop: '60px', fontWeight: 'bold', display: 'inline-block', position: 'relative', minWidth: '120px', marginBottom: showKepalaNip ? '4px' : '3px' }}>
+                        {showKepalaNama ? (
                           <span style={{ display: 'inline-block', borderBottom: '1px solid black', paddingBottom: '2px' }}>{kepala.nama}</span>
-                        ) : kepala.nama}
+                        ) : '_____________________'}
                       </div>
                     )}
-                    {kepala.nip && !hasSignatureImage && <div>NIP. {kepala.nip}</div>}
+                    {showKepalaNip && kepala.nip && !hasSignatureImage && <div style={{ marginTop: '2px' }}>NIP. {kepala.nip}</div>}
                   </div>
                 )}
               </>

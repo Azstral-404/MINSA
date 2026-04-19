@@ -90,8 +90,13 @@ export function JenisSuratWizard({
   const [nomorSuratFormat, setNomorSuratFormat] = useState(
     initialData?.nomorSuratFormat || defaultNomorSuratFormat
   );
-  const [selectedKepalaMadrasahNama, setSelectedKepalaMadrasahNama] = useState(false);
-  const [selectedKepalaMadrasahNip, setSelectedKepalaMadrasahNip] = useState(false);
+const [selectedKepalaMadrasahNama, setSelectedKepalaMadrasahNama] = useState<boolean>(
+    initialData?.extraFields?.showKepalaNama === 'true'
+  );
+  const [selectedKepalaMadrasahNip, setSelectedKepalaMadrasahNip] = useState<boolean>(
+    initialData?.extraFields?.showKepalaNip === 'true'
+  );
+
 
   // ── Header helpers ────────────────────────────────────────────────────────
   const getLastHeaderSettings = useCallback(() => {
@@ -518,24 +523,29 @@ export function JenisSuratWizard({
         } catch (_) {}
       }
 
-      const jenisSurat: JenisSurat = {
-        id: initialData?.id || generateId(),
-        slug: initialData?.slug || slugify(label),
-        label,
-        templateJudul,
-        templateIsi,
-        nomorSuratFormat,
-        templateDocxBase64: undefined,
-        createdAt: initialData?.createdAt || new Date().toISOString(),
-        selectedBiodata: [],
-        jenisSuratHeader,
-        // Signature: reference to Kepala Madrasah + signature image
-        signatureKepalaMadrasahId: signatureKepalaMadrasahId || undefined,
-        signatureImageUrl: signatureImageUrl || undefined,
-      };
+const jenisSurat: JenisSurat = {
+  id: initialData?.id || generateId(),
+  slug: initialData?.slug || slugify(label),
+  label,
+  templateJudul,
+  templateIsi,
+  nomorSuratFormat,
+  templateDocxBase64: undefined,
+  createdAt: initialData?.createdAt || new Date().toISOString(),
+  selectedBiodata: [],
+  jenisSuratHeader,
+  signatureKepalaMadrasahId: signatureKepalaMadrasahId || undefined,
+  signatureImageUrl: signatureImageUrl || undefined,
+  extraFields: {
+    ...(initialData?.extraFields || {}),
+    showKepalaNama: selectedKepalaMadrasahNama ? 'true' : 'false',
+    showKepalaNip: selectedKepalaMadrasahNip ? 'true' : 'false',
+  },
+};
 
-      onSave(jenisSurat);
-      handleClose();
+// ✅ Call functions after object creation
+onSave(jenisSurat);
+handleClose();
     } catch (err) {
       toast.error('Gagal menyimpan jenis surat');
       console.error(err);

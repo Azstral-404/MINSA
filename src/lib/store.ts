@@ -60,6 +60,7 @@ export interface JenisSurat {
   nomorSuratFormat: string;   // Custom nomor surat format for this jenis surat
   createdAt: string;
   selectedBiodata?: string[];
+  extraFields?: Record<string, string>; // Kepala madrasah config, etc.
   jenisSuratHeader?: JenisSuratHeader; // Per-jenis-surat header settings (optional)
   // Signature: uses Kepala Madrasah data (id references kepalaMadrasahId)
   signatureKepalaMadrasahId?: string;  // Reference to KepalaMadrasah
