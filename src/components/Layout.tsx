@@ -6,8 +6,6 @@ import { Moon, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import kemenagLogo from '@/assets/kemenag-logo.png';
-import { detectMadrasahInfo } from '@/lib/store';
-
 export function Layout() {
   const { data, updateData, setTheme } = useApp();
   const isDark = data.settings.theme === 'dark';
@@ -22,10 +20,7 @@ export function Layout() {
   const schoolName = data.settings.schoolName || 'NAMA SEKOLAH';
   const isDefault = schoolName === 'NAMA SEKOLAH';
 
-  const madrasahInfo = detectMadrasahInfo(schoolName);
-  const subtitleText = !isDefault && madrasahInfo
-    ? (madrasahInfo.isMadrasah ? `Kementerian Agama Kota ${madrasahInfo.city}` : 'Kementerian Pendidikan')
-    : '';
+  const subtitleText = '';
 
   return (
     <SidebarProvider>

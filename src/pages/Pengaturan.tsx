@@ -1,8 +1,7 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useApp } from '@/contexts/AppContext';
-import { generateId, slugify, JenisSurat, COLOR_THEMES, ColorTheme, DEFAULT_BIODATA, BiodataField, getAllBiodataFields, generateBiodataTableHtml, expandSchoolName, buildLine2, buildSchoolSub, parseMadrasahName, isValidTahunAjaran } from '@/lib/store';
-import { KABUPATEN_LIST } from '@/lib/kabupaten';
+import { generateId, slugify, JenisSurat, COLOR_THEMES, ColorTheme, DEFAULT_BIODATA, BiodataField, getAllBiodataFields, generateBiodataTableHtml, isValidTahunAjaran } from '@/lib/store';
 import { FONT_SIZE_OPTIONS } from '@/lib/headerUtils';
 import Expandable from '@/components/Expandable';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';

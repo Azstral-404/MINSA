@@ -4,9 +4,6 @@ import {
   JenisSuratHeader,
   generateId,
   slugify,
-  buildLine2,
-  buildSchoolSub,
-  expandSchoolName,
 } from '@/lib/store';
 
 import { FONT_SIZE_OPTIONS } from '@/lib/headerUtils';
