@@ -549,6 +549,29 @@ const Pengaturan = () => {
   const [editKepalaName, setEditKepalaName] = useState('');
   const [editKepalaNip, setEditKepalaNip] = useState('');
 
+  const formatDateShort = (iso: string) => 
+    new Intl.DateTimeFormat('id-ID', { 
+      day: 'numeric', 
+      month: 'short', 
+      year: '2-digit', 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: false 
+    }).format(new Date(iso));
+
+  React.useEffect(() => {
+    const migrated = data.settings.jenisSurat.map(js => ({
+      ...js, 
+      updatedAt: js.updatedAt || js.createdAt 
+    }));
+    if (migrated.some((js, i) => js.updatedAt !== data.settings.jenisSurat[i]?.updatedAt)) {
+      updateData(d => ({ 
+        ...d, 
+        settings: { ...d.settings, jenisSurat: migrated }
+      }));
+    }
+  }, [data.settings.jenisSurat, updateData]);
+
   const handleAkunLogoUpload = (e: React.ChangeEvent<HTMLInputElement>, field: 'customLogo' | 'customKemenagLogo') => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -676,6 +699,7 @@ const Pengaturan = () => {
         templateDocxBase64: newDocxBase64,
         nomorSuratFormat: '###/[JENISURAT]/[BULAN]/[TAHUN]',
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       }] },
     }));
     setJenisLabel(''); setJenisJudul(''); setNewDocxBase64(''); setNewDocxFileName('');
@@ -709,8 +733,8 @@ const Pengaturan = () => {
     updateData(d => ({
       ...d, settings: { ...d.settings, jenisSurat: d.settings.jenisSurat.map(j =>
         j.id === editingJenis
-          ? { ...j, label: editLabel.trim(), templateJudul: editJudul.trim(), slug: slugify(editLabel.trim()) }
-          : j
+      ? { ...j, label: editLabel.trim(), templateJudul: editJudul.trim(), slug: slugify(editLabel.trim()), updatedAt: new Date().toISOString() }
+      : j
       ) },
     }));
     setEditingJenis(null);
@@ -733,7 +757,7 @@ const Pengaturan = () => {
         ...d,
         settings: {
           ...d.settings,
-          jenisSurat: [...d.settings.jenisSurat, jenisSurat],
+          jenisSurat: [...d.settings.jenisSurat, { ...jenisSurat, updatedAt: new Date().toISOString() }],
         },
       }));
       toast.success('Jenis surat ditambahkan');
@@ -751,13 +775,13 @@ const Pengaturan = () => {
         await window.electronAPI.saveTemplateDocx(jenisSurat.slug, jenisSurat.templateDocxBase64);
       }
 
-      updateData(d => ({
-        ...d,
-        settings: {
-          ...d.settings,
-          jenisSurat: d.settings.jenisSurat.map(j => (j.id === jenisSurat.id ? jenisSurat : j)),
-        },
-      }));
+        updateData(d => ({
+          ...d,
+          settings: {
+            ...d.settings,
+            jenisSurat: d.settings.jenisSurat.map(j => (j.id === jenisSurat.id ? { ...jenisSurat, updatedAt: new Date().toISOString() } : j)),
+          },
+        }));
       toast.success('Jenis surat diperbarui');
       setEditWizardOpen(false);
       setEditingJenisSurat(null);
@@ -1356,58 +1380,48 @@ const Pengaturan = () => {
                   </p>
                 </div>
               ) : (
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Label</TableHead>
-                        <TableHead>Judul Dokumen</TableHead>
-                        <TableHead>Format Nomor</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {data.settings.jenisSurat.map((js) => (
-                        <TableRow key={js.id}>
-                          <TableCell className="font-medium">{js.label}</TableCell>
-                          <TableCell>{js.templateJudul || '-'}</TableCell>
-                          <TableCell className="font-mono text-xs">{js.nomorSuratFormat}</TableCell>
-                          <TableCell className="text-right flex gap-1">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setEditingJenisSurat(js);
-                                setEditWizardOpen(true);
-                              }}
-                            >
-                              <Pencil className="h-3 w-3 mr-1" />
-                              Edit
-                            </Button>
-                            {isElectron && js.templateDocxBase64 && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleReloadFromDisk(js)}
-                                disabled={reloadingSlug === js.slug}
-                              >
-                                {reloadingSlug === js.slug ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <RefreshCw className="h-3 w-3 mr-1" />}
-                                Reload
-                              </Button>
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-destructive hover:text-destructive"
-                              onClick={() => setDeleteTarget({ type: 'jenis', id: js.id, label: js.label })}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                <div className="space-y-3">
+                  {data.settings.jenisSurat.map((js) => (
+                    <div key={js.id} className="flex items-center gap-1 p-1 border rounded-lg hover:bg-muted/50 group">
+                      <div className="font-medium flex-1 min-w-0 pl-4 truncate">{js.label}</div>
+                      <div className="flex items-center justify-end text-xs text-muted-foreground tabular-nums min-w-[110px] h-full pr-4">{formatDateShort(js.createdAt)}</div>
+                      <div className="flex items-center justify-center text-xs text-muted-foreground tabular-nums min-w-[110px] h-full pr-4">
+                        {js.updatedAt && js.updatedAt !== js.createdAt ? formatDateShort(js.updatedAt) : '--'}
+                      </div>
+                      <div className="flex gap-0 opacity-0 group-hover:opacity-100 transition-all ml-auto">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setEditingJenisSurat(js);
+                            setEditWizardOpen(true);
+                          }}
+                        >
+                          <Pencil className="h-3 w-3 mr-1" />
+                          Edit
+                        </Button>
+                        {isElectron && js.templateDocxBase64 && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleReloadFromDisk(js)}
+                            disabled={reloadingSlug === js.slug}
+                          >
+                            {reloadingSlug === js.slug ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <RefreshCw className="h-3 w-3 mr-1" />}
+                            Reload
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => setDeleteTarget({ type: 'jenis', id: js.id, label: js.label })}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

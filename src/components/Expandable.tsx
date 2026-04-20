@@ -14,7 +14,7 @@ const Expandable: React.FC<ExpandableProps> = ({ title, children, defaultOpen = 
     <div className="border border-border rounded-lg overflow-hidden">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
+        className="w-full flex items-center justify-between p-2 pl-6 hover:bg-muted/50 transition-colors"
       >
         <h3 className="font-semibold text-base">{title}</h3>
         <ChevronDown

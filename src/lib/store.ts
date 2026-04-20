@@ -58,7 +58,8 @@ export interface JenisSurat {
   templateIsi: string;       // HTML fallback (from mammoth conversion, kept for non-Electron / web)
   templateDocxBase64?: string; // base64-encoded .docx — source of truth when present
   nomorSuratFormat: string;   // Custom nomor surat format for this jenis surat
-  createdAt: string;
+createdAt: string;
+  updatedAt?: string;
   selectedBiodata?: string[];
   extraFields?: Record<string, string>; // Kepala madrasah config, etc.
   jenisSuratHeader?: JenisSuratHeader; // Per-jenis-surat header settings (optional)

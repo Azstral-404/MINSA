@@ -3,9 +3,10 @@ import { NavLink } from '@/components/NavLink';
 import { useApp } from '@/contexts/AppContext';
 import minsaLogo from '@/assets/minsa-logo.png';
 import {
-  Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
+  Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, 
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarFooter, useSidebar,
 } from '@/components/ui/sidebar';
+import Expandable from '@/components/Expandable';
 
 export function AppSidebar() {
   const { state, isMobile } = useSidebar();
@@ -30,9 +31,9 @@ export function AppSidebar() {
         </div>
 
         <SidebarGroup>
-          <SidebarGroupLabel className="text-xs font-bold tracking-wider uppercase">
+          <SidebarGroup className="text-xs font-bold tracking-wider uppercase">
             {!collapsed && 'Menu'}
-          </SidebarGroupLabel>
+          </SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
@@ -47,33 +48,33 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {suratItems.length > 0 && (
+{suratItems.length > 0 && (
           <SidebarGroup>
-            <SidebarGroupLabel className="text-xs font-bold tracking-wider uppercase">
-              {!collapsed && 'Surat'}
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {suratItems.map(item => (
-                  <SidebarMenuItem key={item.url}>
-                    <SidebarMenuButton asChild>
-                      <NavLink to={item.url} className="hover:bg-sidebar-accent/50" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
-                        <item.icon className="mr-2 h-4 w-4" />
-                        {!collapsed && <span>{item.title}</span>}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
+            <Expandable 
+              title={!collapsed && 'Surat' ? 'Surat' : ''}>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {suratItems.map(item => (
+                    <SidebarMenuItem key={item.url}>
+                      <SidebarMenuButton asChild>
+                        <NavLink to={item.url} className="hover:bg-sidebar-accent/50" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
+                          <item.icon className="mr-2 h-4 w-4" />
+                          {!collapsed && <span>{item.title}</span>}
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </Expandable>
           </SidebarGroup>
         )}
 
         {/* FITUR Group */}
         <SidebarGroup>
-          <SidebarGroupLabel className="text-xs font-bold tracking-wider uppercase">
+          <SidebarGroup className="text-xs font-bold tracking-wider uppercase">
             {!collapsed && 'Fitur'}
-          </SidebarGroupLabel>
+          </SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
               {(data.settings.repositories || []).map((repo: any) => (
