@@ -61,7 +61,7 @@ export interface JenisSuratWizardProps {
   customBiodata?: Array<{ key: string; label: string; placeholder: string }>;
 }
 
-const STEPS = ['Label', 'Header', 'Nomor Surat', 'Konten', 'Kepala Madrasah', 'Preview A4'];
+const STEPS = ['Label', 'Header', 'Konten', 'Kepala Madrasah', 'Preview A4'];
 
 // ─── MS-Word-like Tab stops (every 1.25cm, mirroring Word default) ────────────
 const TAB_WIDTH_CM = 1.25;
@@ -172,7 +172,7 @@ export function JenisSuratWizard({
         setCustomHeaderImageUrl(header.customHeaderImageUrl || '');
       }
       
-      setStep(initialStep || 3);
+      setStep(initialStep || 2);
     } else {
       // Add mode: fresh defaults
       setLabel('');
@@ -284,9 +284,9 @@ export function JenisSuratWizard({
 
   const TAB_WIDTH_CM = 1.25;
 
-  // ── Sync editor content when reaching Step 4 ─────────────────────────────
+  // ── Sync editor content when reaching Step 2 (Konten) ─────────────────────────────
   useEffect(() => {
-    if (step === 3 && editorRef.current) {
+    if (step === 2 && editorRef.current) {
       const savedRange = selectionRange;
       if (templateIsi && templateIsi.trim().length > 0) {
         editorRef.current.innerHTML = templateIsi;
@@ -505,16 +505,14 @@ export function JenisSuratWizard({
   const canProceedStep = (): boolean => {
     switch (step) {
       case 0:
-        return label.trim().length > 0 && !labelError;
+        return label.trim().length > 0 && !labelError && nomorSuratFormat.trim().length > 0;
       case 1:
         return true;
       case 2:
-        return nomorSuratFormat.trim().length > 0;
-      case 3:
         return templateIsi.trim().length > 0;
-      case 4:
+      case 3:
         return true;
-      case 5:
+      case 4:
         return true;
       default:
         return false;
@@ -787,35 +785,56 @@ const handleClose = () => {
         {/* ── STEP 0 — Label ────────────────────────────────────────────── */}
         {step === 0 && (
           <div className="space-y-4 mb-6">
-            <div>
-              <Label>Label Jenis Surat *</Label>
-              <Input
-                value={label}
-                onChange={e => setLabel(e.target.value)}
-                placeholder="cth: Surat Keterangan Aktif"
-                autoFocus
-                className={labelError ? 'border-red-500 focus-visible:ring-red-400' : ''}
-              />
-              {labelError && <p className="text-xs text-red-500 mt-1">{labelError}</p>}
-              {!labelError && label.trim() && (
-                <p className="text-xs text-green-600 mt-1">✓ Label tersedia</p>
-              )}
-              <p className="text-xs text-muted-foreground mt-1">
-                Nama jenis surat yang ditampilkan di daftar
-              </p>
+            <div className="border border-border rounded-lg p-3 space-y-3">
+              <div className="space-y-2 mb-6">
+                <Label>Label Jenis Surat *</Label>
+                <Input
+                  value={label}
+                  onChange={e => setLabel(e.target.value)}
+                  placeholder="cth: Surat Keterangan Aktif"
+                  autoFocus
+                  className={labelError ? 'border-red-500 focus-visible:ring-red-400' : ''}
+                />
+                {labelError && <p className="text-xs text-red-500 mt-1">{labelError}</p>}
+                {!labelError && label.trim() && (
+                  <p className="text-xs text-green-600 mt-1">✓ Label tersedia</p>
+                )}
+                <p className="text-xs text-muted-foreground mt-1">
+                  Nama jenis surat yang ditampilkan di daftar
+                </p>
+              </div>
+              <div className="space-y-2 mb-6">
+                <Label>Judul Dokumen</Label>
+                <Input
+                  value={templateJudul}
+                  onChange={e => setTemplateJudul(e.target.value)}
+                  placeholder={label ? label.toUpperCase() : "Auto dari Label Jenis Surat"}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  {label ? `Akan otomatis terisi dari label: "${label.toUpperCase()}"` : 'Judul yang ditampilkan di dokumen surat (akan otomatis dari Label)'}
+                </p>
+              </div>
             </div>
-            <div>
-              <Label>Judul Dokumen</Label>
+            
+          <div className="space-y-4 mb-6">
+            <div className="border border-border rounded-lg p-4 space-y-2">
+              <Label>Format Nomor Surat *</Label>
               <Input
-                value={templateJudul}
-                onChange={e => setTemplateJudul(e.target.value)}
-                placeholder={label ? label.toUpperCase() : "Auto dari Label Jenis Surat"}
+                value={nomorSuratFormat}
+                onChange={e => setNomorSuratFormat(e.target.value)}
+                placeholder="B. {nomor} /Mi.01.21/1/PP.01.1/{bulan}/{tahun}"
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                {label ? `Akan otomatis terisi dari label: "${label.toUpperCase()}"` : 'Judul yang ditampilkan di dokumen surat (akan otomatis dari Label)'}
+              <p className="text-xs text-muted-foreground mt-2">
+                Placeholder: {'{nomor}'} = nomor surat, {'{bulan}'} = bulan (01-12), {'{tahun}'} = tahun
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Preview: {nomorSuratFormat.replace(/\{nomor\}/gi, '001').replace(/\{bulan\}/gi, '03').replace(/\{tahun\}/gi, '2026')}
               </p>
             </div>
           </div>
+        </div>
+
+
         )}
 
         {/* ── STEP 1 — Header ───────────────────────────────────────────── */}
@@ -959,24 +978,6 @@ const handleClose = () => {
         )}
 
         {/* ── STEP 2 — Nomor Surat ──────────────────────────────────────── */}
-        {step === 2 && (
-          <div className="space-y-4 mb-6">
-            <div className="border border-border rounded-lg p-4 space-y-2">
-              <Label>Format Nomor Surat *</Label>
-              <Input
-                value={nomorSuratFormat}
-                onChange={e => setNomorSuratFormat(e.target.value)}
-                placeholder="B. {nomor} /Mi.01.21/1/PP.01.1/{bulan}/{tahun}"
-              />
-              <p className="text-xs text-muted-foreground mt-2">
-                Placeholder: {'{nomor}'} = nomor surat, {'{bulan}'} = bulan (01-12), {'{tahun}'} = tahun
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Preview: {nomorSuratFormat.replace(/\{nomor\}/gi, '001').replace(/\{bulan\}/gi, '03').replace(/\{tahun\}/gi, '2026')}
-              </p>
-            </div>
-          </div>
-        )}
 
         {/* ── STEP 3 — Konten (MS-Word-like editor) ────────────────────── */}
                 {step === 3 && (

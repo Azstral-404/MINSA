@@ -24,7 +24,7 @@ const Expandable: React.FC<ExpandableProps> = ({ title, children, defaultOpen = 
         />
       </button>
       {isOpen && (
-        <div className="border-t border-border">
+        <div>
           {children}
         </div>
       )}
