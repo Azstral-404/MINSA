@@ -55,9 +55,11 @@ export interface JenisSurat {
   slug: string;
   label: string;
   templateJudul: string;
-  templateIsi: string;       // HTML fallback (from mammoth conversion, kept for non-Electron / web)
-  templateDocxBase64?: string; // base64-encoded .docx — source of truth when present
+  templateIsi: string;       // @deprecated Legacy HTML fallback — will be removed in future version
+  templateDocxBase64?: string; // base64-encoded .docx — PRIMARY format (Office Open XML)
+  templateXml?: string;      // Pure XML representation for interoperability
   nomorSuratFormat: string;   // Custom nomor surat format for this jenis surat
+
 createdAt: string;
   updatedAt?: string;
   selectedBiodata?: string[];
@@ -150,6 +152,43 @@ export interface AppData {
   settings: AppSettings;
   surat: Surat[];
 }
+
+// ── XML Document Types (Office Open XML based) ───────────────────────────────
+
+export interface XmlDocumentNode {
+  type: 'document' | 'header' | 'body' | 'paragraph' | 'run' | 'text' | 'table' | 'tableRow' | 'tableCell' | 'signature' | 'image';
+  children?: XmlDocumentNode[];
+  text?: string;
+  style?: Record<string, string>;
+  placeholder?: string;
+  attributes?: Record<string, string>;
+}
+
+export interface XmlDocument {
+  version: '1.0';
+  encoding: 'UTF-8';
+  root: XmlDocumentNode;
+}
+
+export interface DocxExportOptions {
+  filename: string;
+  pageSize?: 'A4' | 'Letter';
+  orientation?: 'portrait' | 'landscape';
+  margins?: {
+    top: number;
+    right: number;
+    bottom: number;
+    left: number;
+  };
+}
+
+export const DEFAULT_DOCX_OPTIONS: DocxExportOptions = {
+  filename: 'document.docx',
+  pageSize: 'A4',
+  orientation: 'portrait',
+  margins: { top: 1440, right: 1440, bottom: 1440, left: 1440 }, // 1 inch in twips
+};
+
 
 const DEFAULT_HEADER: SuratHeader = {
   line1: '',
@@ -484,4 +523,137 @@ export function generateBiodataTableHtml(selectedKeys: string[], allFields: Biod
       `</p>`;
   }
   return html;
+}
+
+// ── XML Document Utilities ───────────────────────────────────────────────────
+
+/**
+ * Create a pure XML document string from structured nodes
+ */
+export function createXmlDocument(root: XmlDocumentNode): string {
+  const declaration = '<?xml version="1.0" encoding="UTF-8"?>';
+  const body = serializeXmlNode(root);
+  return `${declaration}\n${body}`;
+}
+
+function serializeXmlNode(node: XmlDocumentNode): string {
+  const attrs = node.attributes
+    ? Object.entries(node.attributes).map(([k, v]) => `${k}="${escapeXml(v)}"`).join(' ')
+    : '';
+  const openTag = attrs ? `<${node.type} ${attrs}>` : `<${node.type}>`;
+  const closeTag = `</${node.type}>`;
+
+  if (node.text !== undefined) {
+    return `${openTag}${escapeXml(node.text)}${closeTag}`;
+  }
+
+  if (node.children && node.children.length > 0) {
+    const children = node.children.map(serializeXmlNode).join('\n');
+    return `${openTag}\n${children}\n${closeTag}`;
+  }
+
+  return `<${node.type}${attrs ? ' ' + attrs : ''} />`;
+}
+
+function escapeXml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '<')
+    .replace(/>/g, '>')
+    .replace(/"/g, '"')
+    .replace(/'/g, '&apos;');
+}
+
+/**
+ * Convert legacy HTML template to XML document structure
+ * @deprecated Use DOCX-based templates instead
+ */
+export function htmlToXmlDocument(html: string): XmlDocumentNode {
+  // Parse HTML and convert to XML structure
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  const body = doc.body;
+
+  return {
+    type: 'document',
+    children: Array.from(body.childNodes).map(node => domNodeToXmlNode(node)).filter(Boolean) as XmlDocumentNode[],
+  };
+}
+
+function domNodeToXmlNode(node: Node): XmlDocumentNode | null {
+  if (node.nodeType === Node.TEXT_NODE) {
+    const text = node.textContent?.trim();
+    if (!text) return null;
+    return { type: 'text', text };
+  }
+
+  if (node.nodeType === Node.ELEMENT_NODE) {
+    const el = node as HTMLElement;
+    const type = mapHtmlTagToXmlType(el.tagName.toLowerCase());
+    const children = Array.from(el.childNodes)
+      .map(domNodeToXmlNode)
+      .filter(Boolean) as XmlDocumentNode[];
+
+    return {
+      type,
+      children: children.length > 0 ? children : undefined,
+      style: el.getAttribute('style') ? parseStyle(el.getAttribute('style')!) : undefined,
+      attributes: el.className ? { class: el.className } : undefined,
+    };
+  }
+
+  return null;
+}
+
+function mapHtmlTagToXmlType(tag: string): XmlDocumentNode['type'] {
+  const mapping: Record<string, XmlDocumentNode['type']> = {
+    p: 'paragraph',
+    div: 'paragraph',
+    span: 'run',
+    b: 'run',
+    strong: 'run',
+    i: 'run',
+    em: 'run',
+    u: 'run',
+    table: 'table',
+    tr: 'tableRow',
+    td: 'tableCell',
+    th: 'tableCell',
+    img: 'image',
+    br: 'paragraph',
+  };
+  return mapping[tag] || 'paragraph';
+}
+
+function parseStyle(styleStr: string): Record<string, string> {
+  const styles: Record<string, string> = {};
+  styleStr.split(';').forEach(rule => {
+    const [key, value] = rule.split(':').map(s => s.trim());
+    if (key && value) styles[key] = value;
+  });
+  return styles;
+}
+
+/**
+ * Check if a jenis surat uses the new DOCX-based format
+ */
+export function isDocxTemplate(jenisSurat: JenisSurat): boolean {
+  return !!jenisSurat.templateDocxBase64 && jenisSurat.templateDocxBase64.length > 0;
+}
+
+/**
+ * Check if a jenis surat uses the legacy HTML format
+ * @deprecated
+ */
+export function isLegacyHtmlTemplate(jenisSurat: JenisSurat): boolean {
+  return !isDocxTemplate(jenisSurat) && !!jenisSurat.templateIsi;
+}
+
+/**
+ * Get the effective template content type for a jenis surat
+ */
+export function getTemplateType(jenisSurat: JenisSurat): 'docx' | 'xml' | 'html' {
+  if (isDocxTemplate(jenisSurat)) return 'docx';
+  if (jenisSurat.templateXml) return 'xml';
+  return 'html';
 }

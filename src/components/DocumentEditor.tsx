@@ -8,8 +8,9 @@ import Subscript from '@tiptap/extension-subscript';
 import FontFamily from '@tiptap/extension-font-family';
 import TextStyle from '@tiptap/extension-text-style';
 import { useRef, useEffect, useState, useCallback } from 'react';
-import html2pdf from 'html2pdf.js';
 import DocumentPage from './DocumentPage';
+import { downloadTipTapAsDocx } from '@/lib/editorToDocx';
+
 import { CONTENT_HEIGHT_PX } from '@/lib/pageConstants';
 import FontSize from './extensions/FontSize';
 import { Indent as IndentExt } from './extensions/Indent';
@@ -139,19 +140,17 @@ export default function DocumentEditor({ value, onChange }: DocumentEditorProps)
     return () => observer.disconnect();
   }, [editor]);
 
-  const generatePDF = useCallback(() => {
-    if (!pdfRef.current) return;
-    html2pdf()
-      .set({
-        margin: 0,
-        filename: 'document.pdf',
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
-        jsPDF: { unit: 'cm', format: 'a4', orientation: 'portrait' },
-      })
-      .from(pdfRef.current)
-      .save();
-  }, []);
+  const exportDocx = useCallback(async () => {
+    if (!editor) return;
+    try {
+      const json = editor.getJSON();
+      await downloadTipTapAsDocx(json, 'document.docx');
+    } catch (err) {
+      console.error('DOCX export failed:', err);
+      alert('Gagal mengekspor DOCX');
+    }
+  }, [editor]);
+
 
   const handleLink = useCallback(() => {
     if (!editor) return;
@@ -527,15 +526,16 @@ export default function DocumentEditor({ value, onChange }: DocumentEditorProps)
         ))}
       </div>
 
-      {/* PDF Export FAB */}
+      {/* DOCX Export FAB */}
       <Button
         size="icon"
         className="fixed bottom-6 right-6 h-12 w-12 rounded-full shadow-lg"
-        onClick={generatePDF}
-        title="Export PDF"
+        onClick={exportDocx}
+        title="Export DOCX"
       >
         <FileDown className="h-5 w-5" />
       </Button>
+
     </div>
   );
 }

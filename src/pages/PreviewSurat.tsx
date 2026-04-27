@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { ArrowLeft, MoreVertical, Printer, Trash2, Pencil, FileDown, Loader2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { buildA4Docx, downloadDocx } from '@/lib/buildA4Docx';
 import { buildA4Html } from '@/lib/buildA4Html';
 
 interface PrinterInfo {
@@ -303,6 +304,9 @@ const PreviewSurat = () => {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleOpenPrintDialog}>
                   <Printer className="mr-2 h-4 w-4" /> Print
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportDocx}>
+                  <FileDown className="mr-2 h-4 w-4" /> Export DOCX
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleExportPdf}>
                   <FileDown className="mr-2 h-4 w-4" /> Export PDF

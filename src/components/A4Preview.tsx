@@ -1,5 +1,5 @@
 import { useApp } from '@/contexts/AppContext';
-import { Surat, JenisSurat, formatNomorSurat, KELAS_OPTIONS } from '@/lib/store';
+import { Surat, JenisSurat, formatNomorSurat, KELAS_OPTIONS, getTemplateType, isDocxTemplate } from '@/lib/store';
 import kemnogLogo from '@/assets/kemenag-logo.png';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Loader2 } from 'lucide-react';
@@ -84,26 +84,7 @@ function useDocxHtml(jenisSurat: JenisSurat, surat: Surat, kabupaten: string, cu
       let converted = result.value;
 
       // Inject biodata placeholders into converted HTML
-      converted = converted
-        .replace(/\{nama\}/gi, '<b>' + surat.nama.toUpperCase() + '</b>')
-        .replace(/\{tempat_lahir\}/gi, surat.tempatLahir)
-        .replace(/\{tanggal_lahir\}/gi, formatIndonesianDate(surat.tanggalLahir))
-        .replace(/\{jenis_kelamin\}/gi, surat.jenisKelamin)
-        .replace(/\{kelas\}/gi, () => {
-          const opt = KELAS_OPTIONS.find(o => o.value === surat.kelas);
-          return opt ? opt.label : surat.kelas;
-        })
-        .replace(/\{no_induk\}/gi, surat.noInduk)
-        .replace(/\{nisn\}/gi, surat.nisn)
-        .replace(/\{nama_orang_tua\}/gi, surat.namaOrangTua)
-        .replace(/\{alamat\}/gi, surat.alamat)
-        .replace(/\{tahun_ajaran\}/gi, surat.tahunAjaran)
-        .replace(/\{kabupaten\}/gi, kabupaten);
-
-      for (const field of customBiodata) {
-        const regex = new RegExp(field.placeholder.replace(/[{}]/g, '\\$&'), 'gi');
-        converted = converted.replace(regex, (surat.extraFields || {})[field.key] || '');
-      }
+      converted = injectBiodata(converted, surat, kabupaten, customBiodata);
 
       setHtml(converted);
     } catch (e: any) {
@@ -124,6 +105,34 @@ function useDocxHtml(jenisSurat: JenisSurat, surat: Surat, kabupaten: string, cu
   }, [jenisSurat.templateDocxBase64, convert]);
 
   return { html, loading, error };
+}
+
+/**
+ * Inject biodata values into template content
+ */
+function injectBiodata(template: string, surat: Surat, kabupaten: string, customBiodata: any[]): string {
+  let result = template
+    .replace(/\{nama\}/gi, '<b>' + surat.nama.toUpperCase() + '</b>')
+    .replace(/\{tempat_lahir\}/gi, surat.tempatLahir)
+    .replace(/\{tanggal_lahir\}/gi, formatIndonesianDate(surat.tanggalLahir))
+    .replace(/\{jenis_kelamin\}/gi, surat.jenisKelamin)
+    .replace(/\{kelas\}/gi, () => {
+      const opt = KELAS_OPTIONS.find(o => o.value === surat.kelas);
+      return opt ? opt.label : surat.kelas;
+    })
+    .replace(/\{no_induk\}/gi, surat.noInduk)
+    .replace(/\{nisn\}/gi, surat.nisn)
+    .replace(/\{nama_orang_tua\}/gi, surat.namaOrangTua)
+    .replace(/\{alamat\}/gi, surat.alamat)
+    .replace(/\{tahun_ajaran\}/gi, surat.tahunAjaran)
+    .replace(/\{kabupaten\}/gi, kabupaten);
+
+  for (const field of customBiodata) {
+    const regex = new RegExp(field.placeholder.replace(/[{}]/g, '\\$&'), 'gi');
+    result = result.replace(regex, (surat.extraFields || {})[field.key] || '');
+  }
+
+  return result;
 }
 
 export function A4Preview({ surat, jenisSurat }: A4PreviewProps) {
@@ -172,34 +181,18 @@ export function A4Preview({ surat, jenisSurat }: A4PreviewProps) {
     return () => window.removeEventListener('resize', updateScale);
   }, []);
 
+  // Determine template type and render accordingly
+  const templateType = getTemplateType(jenisSurat);
+  const hasDocx = templateType === 'docx';
+  
   // DOCX mode: convert base64 → HTML
-  const hasDocx = !!jenisSurat.templateDocxBase64;
   const { html: docxHtml, loading: docxLoading, error: docxError } = useDocxHtml(
     jenisSurat, surat, kabupaten, customBiodata
   );
 
   // HTML template mode (legacy / fallback)
   const parseTemplate = (template: string) => {
-    let result = template
-      .replace(/\{nama\}/gi, '<b>' + surat.nama.toUpperCase() + '</b>')
-      .replace(/\{tempat_lahir\}/gi, surat.tempatLahir)
-      .replace(/\{tanggal_lahir\}/gi, formatIndonesianDate(surat.tanggalLahir))
-      .replace(/\{jenis_kelamin\}/gi, surat.jenisKelamin)
-      .replace(/\{kelas\}/gi, () => {
-        const opt = KELAS_OPTIONS.find(o => o.value === surat.kelas);
-        return opt ? opt.label : surat.kelas;
-      })
-      .replace(/\{no_induk\}/gi, surat.noInduk)
-      .replace(/\{nisn\}/gi, surat.nisn)
-      .replace(/\{nama_orang_tua\}/gi, surat.namaOrangTua)
-      .replace(/\{alamat\}/gi, surat.alamat)
-      .replace(/\{tahun_ajaran\}/gi, surat.tahunAjaran)
-      .replace(/\{kabupaten\}/gi, kabupaten);
-    for (const field of customBiodata) {
-      const regex = new RegExp(field.placeholder.replace(/[{}]/g, '\\$&'), 'gi');
-      result = result.replace(regex, (surat.extraFields || {})[field.key] || '');
-    }
-    return result;
+    return injectBiodata(template, surat, kabupaten, customBiodata);
   };
 
   const parsedIsi = hasDocx ? (docxHtml || '') : parseTemplate(jenisSurat.templateIsi);
