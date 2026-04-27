@@ -408,6 +408,15 @@ export function getAllBiodataFields(settings: AppSettings): BiodataField[] {
   return [...DEFAULT_BIODATA, ...(settings.customBiodata || []).map(f => ({ ...f, isCustom: true }))];
 }
 
+export function getAllBiodataPlaceholders(settings: AppSettings): { key: string; label: string; placeholder: string }[] {
+  return getAllBiodataFields(settings).map(f => ({
+    key: f.key,
+    label: f.label,
+    placeholder: f.placeholder,
+  }));
+}
+
+
 export function extractBiodataKeysFromTemplate(settings: AppSettings, template: string): string[] {
   if (!template) return [];
 
@@ -476,5 +485,3 @@ export function generateBiodataTableHtml(selectedKeys: string[], allFields: Biod
   }
   return html;
 }
-
-

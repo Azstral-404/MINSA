@@ -48,6 +48,8 @@ import {
   Outdent,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import DocumentEditor from './DocumentEditor';
+
 
 export interface JenisSuratWizardProps {
   open: boolean;
@@ -61,7 +63,7 @@ export interface JenisSuratWizardProps {
   customBiodata?: Array<{ key: string; label: string; placeholder: string }>;
 }
 
-const STEPS = ['Label', 'Header', 'Konten', 'Kepala Madrasah', 'Preview A4'];
+const STEPS = ['Label', 'Header', 'Editor', 'Kepala Madrasah', 'Preview A4'];
 
 // ─── MS-Word-like Tab stops (every 1.25cm, mirroring Word default) ────────────
 const TAB_WIDTH_CM = 1.25;
@@ -977,334 +979,26 @@ const handleClose = () => {
           </div>
         )}
 
-        {/* ── STEP 2 — Nomor Surat ──────────────────────────────────────── */}
-
-        {/* ── STEP 3 — Konten (MS-Word-like editor) ────────────────────── */}
-                {step === 3 && (
+        {/* ── STEP 2 — Editor (Document Editor from Legal-Document-Editor) ────────────────────── */}
+        {step === 2 && (
           <div className="space-y-4 mb-6">
             <div className="border border-border rounded-lg p-4 space-y-3">
               <div>
-                <Label className="text-base font-medium">Insert Label Format *</Label>
+                <Label className="text-base font-medium">Editor Dokumen *</Label>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Editor seperti MS Word: Tab = indent, Shift+Tab = outdent, Ctrl+B/I/U, Ctrl+Z/Y
+                  Editor A4 dengan tampilan halaman seperti dokumen asli. Klik tombol PDF di pojok kanan bawah untuk mengekspor.
                 </p>
-              <div className="border border-amber-200 rounded-lg p-3 bg-amber-50/60 dark:bg-amber-900/10 dark:border-amber-800 space-y-2">
-                <p className="text-xs font-semibold text-amber-800 dark:text-amber-400">
-                  📌 Insert Placeholder: Biodata (klik untuk sisipkan ke posisi kursor):
-                </p>
-
-                {/* Default biodata placeholders */}
-                <div className="flex flex-wrap gap-1">
-                  {PLACEHOLDERS.map(p => (
-                    <Button
-                      key={p.token}
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="text-xs h-7 font-mono border-amber-300 hover:bg-amber-100"
-                      onMouseDown={e => {
-                        e.preventDefault();
-                        insertLabeledPlaceholder(p);
-                      }}
-                    >
-                      {p.token}
-                    </Button>
-                  ))}
-                </div>
-
-                {/* Custom biodata fields */}
-                {customBiodata.length > 0 && (
-                  <>
-                    <div className="flex items-center gap-2 pt-1">
-                      <div className="flex-1 h-px bg-amber-200 dark:bg-amber-700" />
-                      <span className="text-xs text-amber-700 dark:text-amber-400 font-medium whitespace-nowrap">
-                        Biodata Kustom
-                      </span>
-                      <div className="flex-1 h-px bg-amber-200 dark:bg-amber-700" />
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {customBiodata.map(field => {
-                        const phObj: Placeholder = { token: field.placeholder, label: field.label };
-                        return (
-                          <Button
-                            key={field.key}
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="text-xs h-7 font-mono border-amber-400 bg-amber-100/50 hover:bg-amber-100"
-                            title={`${field.label} → ${field.placeholder}`}
-                            onMouseDown={e => {
-                              e.preventDefault();
-                              insertLabeledPlaceholder(phObj);
-                            }}
-                          >
-                            {field.placeholder}
-                          </Button>
-                        );
-                      })}
-                    </div>
-                  </>
-                )}
               </div>
-
-              {/* ── Toolbar ── */}
-              <div className="flex flex-wrap gap-1 p-2 border border-border rounded-lg bg-muted/40 items-center">
-
-                {/* Font size */}
-                <Select onValueChange={applyFontSize} defaultValue="12">
-                  <SelectTrigger className="h-8 w-20 text-xs">
-                    <SelectValue placeholder="12pt" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 36, 48, 72].map(s => (
-                      <SelectItem key={s} value={String(s)}>{s}pt</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <div className="w-px bg-border mx-1 h-6" />
-
-                {/* Bold / Italic / Underline / Strikethrough */}
-                {[
-                  { cmd: 'bold', icon: <Bold className="h-4 w-4" />, title: 'Bold (Ctrl+B)' },
-                  { cmd: 'italic', icon: <Italic className="h-4 w-4" />, title: 'Italic (Ctrl+I)' },
-                  { cmd: 'underline', icon: <Underline className="h-4 w-4" />, title: 'Underline (Ctrl+U)' },
-                  { cmd: 'strikeThrough', icon: <Strikethrough className="h-4 w-4" />, title: 'Strikethrough' },
-                ].map(item => (
-                  <Button
-                    key={item.cmd}
-                    variant="outline"
-                    size="sm"
-                    onMouseDown={e => { e.preventDefault(); applyFormat(item.cmd); }}
-                    className="h-8 w-8 p-0"
-                    title={item.title}
-                  >
-                    {item.icon}
-                  </Button>
-                ))}
-
-                <div className="w-px bg-border mx-1 h-6" />
-
-                {/* Alignment */}
-                {[
-                  { cmd: 'justifyLeft', icon: <AlignLeft className="h-4 w-4" />, title: 'Rata Kiri' },
-                  { cmd: 'justifyCenter', icon: <AlignCenter className="h-4 w-4" />, title: 'Tengah' },
-                  { cmd: 'justifyRight', icon: <AlignRight className="h-4 w-4" />, title: 'Rata Kanan' },
-                  { cmd: 'justifyFull', icon: <AlignJustify className="h-4 w-4" />, title: 'Justify (Ctrl+J)' },
-                ].map(item => (
-                  <Button
-                    key={item.cmd}
-                    variant="outline"
-                    size="sm"
-                    onMouseDown={e => { e.preventDefault(); applyFormat(item.cmd); }}
-                    className="h-8 w-8 p-0"
-                    title={item.title}
-                  >
-                    {item.icon}
-                  </Button>
-                ))}
-
-                <div className="w-px bg-border mx-1 h-6" />
-
-                {/* Lists */}
-                <Button variant="outline" size="sm" onMouseDown={e => { e.preventDefault(); applyFormat('insertUnorderedList'); }} className="h-8 w-8 p-0" title="Bullet List">
-                  <List className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="sm" onMouseDown={e => { e.preventDefault(); applyFormat('insertOrderedList'); }} className="h-8 w-8 p-0" title="Numbered List">
-                  <ListOrdered className="h-4 w-4" />
-                </Button>
-
-                <div className="w-px bg-border mx-1 h-6" />
-
-                {/* Indent / Outdent */}
-                <Button variant="outline" size="sm" onMouseDown={e => { e.preventDefault(); applyFormat('indent'); }} className="h-8 w-8 p-0" title="Indent (Tab)">
-                  <Indent className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="sm" onMouseDown={e => { e.preventDefault(); applyFormat('outdent'); }} className="h-8 w-8 p-0" title="Outdent (Shift+Tab)">
-                  <Outdent className="h-4 w-4" />
-                </Button>
-
-                <div className="w-px bg-border mx-1 h-6" />
-
-                {/* Undo / Redo */}
-                <Button variant="outline" size="sm" onMouseDown={e => { e.preventDefault(); applyFormat('undo'); }} className="h-8 w-8 p-0" title="Undo (Ctrl+Z)">
-                  <Undo2 className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="sm" onMouseDown={e => { e.preventDefault(); applyFormat('redo'); }} className="h-8 w-8 p-0" title="Redo (Ctrl+Y)">
-                  <Redo2 className="h-4 w-4" />
-                </Button>
-
-                {/* Remove formatting */}
-                <Button variant="outline" size="sm" onMouseDown={e => { e.preventDefault(); applyFormat('removeFormat'); }} className="h-8 px-2 text-xs" title="Hapus Pemformatan">
-                  <X className="h-3 w-3 mr-1" />Format
-                </Button>
-              </div>
-
-                <div className="w-px bg-border mx-1 h-6" />
-
-                {/* Bold / Italic / Underline / Strikethrough */}
-                {[
-                  { cmd: 'bold', icon: <Bold className="h-4 w-4" />, title: 'Bold (Ctrl+B)' },
-                  { cmd: 'italic', icon: <Italic className="h-4 w-4" />, title: 'Italic (Ctrl+I)' },
-                  { cmd: 'underline', icon: <Underline className="h-4 w-4" />, title: 'Underline (Ctrl+U)' },
-                  { cmd: 'strikeThrough', icon: <Strikethrough className="h-4 w-4" />, title: 'Strikethrough' },
-                ].map(item => (
-                  <Button
-                    key={item.cmd}
-                    variant="outline"
-                    size="sm"
-                    onMouseDown={e => { e.preventDefault(); applyFormat(item.cmd); }}
-                    className="h-8 w-8 p-0"
-                    title={item.title}
-                  >
-                    {item.icon}
-                  </Button>
-                ))}
-
-                <div className="w-px bg-border mx-1 h-6" />
-
-                {/* Alignment */}
-                {[
-                  { cmd: 'justifyLeft', icon: <AlignLeft className="h-4 w-4" />, title: 'Rata Kiri' },
-                  { cmd: 'justifyCenter', icon: <AlignCenter className="h-4 w-4" />, title: 'Tengah' },
-                  { cmd: 'justifyRight', icon: <AlignRight className="h-4 w-4" />, title: 'Rata Kanan' },
-                  { cmd: 'justifyFull', icon: <AlignJustify className="h-4 w-4" />, title: 'Justify (Ctrl+J)' },
-                ].map(item => (
-                  <Button
-                    key={item.cmd}
-                    variant="outline"
-                    size="sm"
-                    onMouseDown={e => { e.preventDefault(); applyFormat(item.cmd); }}
-                    className="h-8 w-8 p-0"
-                    title={item.title}
-                  >
-                    {item.icon}
-                  </Button>
-                ))}
-
-                <div className="w-px bg-border mx-1 h-6" />
-
-                {/* Lists */}
-                <Button variant="outline" size="sm" onMouseDown={e => { e.preventDefault(); applyFormat('insertUnorderedList'); }} className="h-8 w-8 p-0" title="Bullet List">
-                  <List className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="sm" onMouseDown={e => { e.preventDefault(); applyFormat('insertOrderedList'); }} className="h-8 w-8 p-0" title="Numbered List">
-                  <ListOrdered className="h-4 w-4" />
-                </Button>
-
-                <div className="w-px bg-border mx-1 h-6" />
-
-                {/* Indent / Outdent */}
-                <Button variant="outline" size="sm" onMouseDown={e => { e.preventDefault(); applyFormat('indent'); }} className="h-8 w-8 p-0" title="Indent (Tab)">
-                  <Indent className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="sm" onMouseDown={e => { e.preventDefault(); applyFormat('outdent'); }} className="h-8 w-8 p-0" title="Outdent (Shift+Tab)">
-                  <Outdent className="h-4 w-4" />
-                </Button>
-
-                <div className="w-px bg-border mx-1 h-6" />
-
-                {/* Undo / Redo */}
-                <Button variant="outline" size="sm" onMouseDown={e => { e.preventDefault(); applyFormat('undo'); }} className="h-8 w-8 p-0" title="Undo (Ctrl+Z)">
-                  <Undo2 className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="sm" onMouseDown={e => { e.preventDefault(); applyFormat('redo'); }} className="h-8 w-8 p-0" title="Redo (Ctrl+Y)">
-                  <Redo2 className="h-4 w-4" />
-                </Button>
-
-                {/* Remove formatting */}
-                <Button variant="outline" size="sm" onMouseDown={e => { e.preventDefault(); applyFormat('removeFormat'); }} className="h-8 px-2 text-xs" title="Hapus Pemformatan">
-                  <X className="h-3 w-3 mr-1" />Format
-                </Button>
-              </div>
-
-              {/* ── Editable area ── */}
-              <style>{`
-                .minsa-editor { 
-                  outline: none; 
-                  direction: ltr !important;
-                  text-align: left !important;
-                  max-width: 159.2mm !important;
-                }
-                .minsa-editor:focus { box-shadow: 0 0 0 2px hsl(var(--primary)/0.4); }
-                .minsa-editor .tab-indent { 
-                  display: inline-block !important; 
-                  width: ${TAB_WIDTH_CM}cm !important; 
-                  min-width: ${TAB_WIDTH_CM}cm !important; 
-                }
-                .placeholder-token {
-                  background: #fffbcc;
-                  border: 1px dashed #d9a600;
-                  padding: 0 2px;
-                  border-radius: 2px;
-                  user-select: none;
-                  direction: ltr;
-                }
-                [data-ph-label] {
-                  display: inline !important;
-                  white-space: normal !important;
-                }
-                .ph-label {
-                  font-family: monospace;
-                  letter-spacing: normal;
-                  padding-right: 1ch;
-                }
-                .ph-colon {
-                  display: inline-block;
-                  width: 1.5ch;
-                  text-align: right;
-                }
-                .minsa-editor span[contenteditable="false"] { cursor:default; user-select:all; }
-                .minsa-editor * { user-select: text; }
-              `}</style>
-              <div
-                ref={editorRef}
-                contentEditable
-                suppressContentEditableWarning
-                spellCheck
-                onInput={e => debouncedSetTemplateIsi(e.currentTarget.innerHTML)}
-                onBlur={saveEditorSelection}
-                onMouseUp={saveEditorSelection}
-                onKeyUp={saveEditorSelection}
-                onKeyDown={handleEditorKeyDown}
-className="minsa-editor min-h-[320px] p-4 border border-border rounded-lg bg-white text-black leading-relaxed overflow-auto mx-auto shadow-inner"
-                style={{
-                  direction: 'ltr',
-                  textAlign: 'left',
-                  fontFamily: "'Times New Roman', Times, serif",
-                  fontSize: '12pt',
-                  lineHeight: '1.5',
-                  whiteSpace: 'pre-wrap',
-                  wordWrap: 'break-word',
-                  maxWidth: '159.2mm', /* A4 210mm - 2x25.4mm margins */
-                  margin: '0 auto',
-                  boxShadow: 'inset 0 0 0 1px #e5e7eb, 0 0 0 1px #f3f4f6',
-                }}
-                data-placeholder="Mulai mengetik isi surat di sini..."
+              <DocumentEditor
+                value={templateIsi}
+                onChange={setTemplateIsi}
               />
-
-              <p className="text-xs text-muted-foreground">
-                💡 <strong>Tab</strong> = indent 1.25cm &nbsp;|&nbsp;
-                <strong>Shift+Tab</strong> = outdent &nbsp;|&nbsp;
-                <strong>Ctrl+B/I/U</strong> = Bold/Italic/Underline &nbsp;|&nbsp;
-                <strong>Ctrl+Z/Y</strong> = Undo/Redo
-              </p>
-
-              {/* Live A4 preview below editor */}
-              <div className="border-t border-border pt-4">
-                <Label className="text-sm font-medium mb-2 block">Preview A4 (real-time)</Label>
-                <div className="bg-gray-100 p-3 rounded-lg overflow-auto">
-                  <div style={{ transform: 'scale(0.55)', transformOrigin: 'top left', width: '210mm', pointerEvents: 'none' }}>
-                    <InlineA4Preview />
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         )}
 
-        {/* ── STEP 4 — Kepala Madrasah ───────────────────────────────── */}
-        {step === 4 && (
+        {/* ── STEP 3 — Kepala Madrasah ───────────────────────────────── */}
+        {step === 3 && (
           <div className="space-y-4 mb-6">
             <div className="border border-border rounded-lg p-4 space-y-4">
               <Label className="text-base font-medium">Kepala Madrasah</Label>
@@ -1360,8 +1054,8 @@ className="minsa-editor min-h-[320px] p-4 border border-border rounded-lg bg-whi
           </div>
         )}
 
-        {/* ── STEP 5 — Full A4 Preview ────────────────────────────────── */}
-        {step === 5 && (
+        {/* ── STEP 4 — Full A4 Preview ────────────────────────────────── */}
+        {step === 4 && (
           <div className="space-y-4 mb-6">
             <Card>
               <CardHeader>

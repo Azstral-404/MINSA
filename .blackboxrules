@@ -1,0 +1,59 @@
+# Remove verbose reasoning preambles
+Now I have a comprehensive understanding
+Let me summarize what I need to do
+Let me think
+Wait, is that true\?
+Let me plan
+Let me create
+Let me do that now
+
+# Remove "one more thing" patterns
+One more thing
+Let me also
+Also, I should
+Actually, looking at
+Actually, I need to
+
+# Remove satisfaction statements
+OK, I'm.*with this
+I'm satisfied.*approach
+
+# Remove meta-commentary about the task
+The user hasn't responded yet
+I need to.*plan
+Let me present the plan
+
+# Remove verbose connectors and reasoning
+So.*should work
+Because.*returns
+However,.*itself
+So even if
+So the reference
+
+# Remove thinking-out-loud phrases
+Wait, I need to
+Hmm, let me
+I think I should
+Let me reconsider
+Let me re-examine
+
+# Remove task-checking statements
+Looking at the instructions
+Looking at the reference
+Looking at the current
+Checking if there are
+Let me also check
+
+# Remove verbose conclusion statements
+Let me now write
+Let me now create
+Now let me
+So I should
+So I need to
+
+# Remove multi-line reasoning blocks
+^.*Let me.*$
+^.*Wait.*$
+^.*Actually.*$
+^.*One more.*$
+^.*Let me now.*$
